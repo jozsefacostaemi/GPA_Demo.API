@@ -1,0 +1,1 @@
+﻿Scaffold-DbContext "Server=DESKTOP-0SDTHPP\SQLEXPRESS;Database=GPA_Demo;Trusted_Connection=True;TrustServerCertificate=true;" Microsoft.EntityFrameworkCore.SqlServer -OutputDir Infraestructure/Persistence/Entities -Context ApplicationDbContext -Force

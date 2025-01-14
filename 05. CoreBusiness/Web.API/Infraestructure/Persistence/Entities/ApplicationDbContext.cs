@@ -194,7 +194,6 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasOne(d => d.PersonState).WithMany(p => p.HealthCareStaffs)
                 .HasForeignKey(d => d.PersonStateId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_HealthCareStaffs_PersonStates");
         });
 

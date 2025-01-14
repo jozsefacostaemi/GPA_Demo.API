@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 
-namespace Web.Core.Business.API.Domain.Persistence.Repositories
+namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
 {
     public class QueueRepository : IQueueRepository
     {
@@ -29,7 +29,7 @@ namespace Web.Core.Business.API.Domain.Persistence.Repositories
                 CityName = x.City.Name,
                 ProcessName = x.Process.Name,
                 StateName = x.AttentionState.Name,
-                NOrder = x.NOrder,
+                x.NOrder,
                 ConfQueueId = x.Id,
             }).ToList();
             var resultGeneratedQueues = await _context.GeneratedQueues.Where(x => x.Active == true).Select(x => x.ConfigQueueId).ToListAsync();
@@ -53,7 +53,6 @@ namespace Web.Core.Business.API.Domain.Persistence.Repositories
         public async Task<bool> CreatedQueues()
         {
             var resultGeneratedQueues = _context.GeneratedQueues.Include(x => x.ConfigQueue).Where(x => x.Active == true).ToList();
-
             foreach (var dr in resultGeneratedQueues)
             {
                 await _rabbitMQFunctions.CreateQueueAsync(dr.Name,
@@ -64,9 +63,9 @@ namespace Web.Core.Business.API.Domain.Persistence.Repositories
                     dr.ConfigQueue.MessageLifeTime,
                     dr.ConfigQueue.QueueExpireTime,
                     dr.ConfigQueue.QueueMode,
-                    dr.ConfigQueue.QueueDeadLetterExchange, dr.ConfigQueue.QueueDeadLetterExchangeRoutingKey);
+                    dr.ConfigQueue.QueueDeadLetterExchange, 
+                    dr.ConfigQueue.QueueDeadLetterExchangeRoutingKey);
             }
-
             return true;
         }
         /* Función que elimina todas las colas en el orquestador de mensajeria */

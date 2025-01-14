@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace Lib.MessageQueues.Functions.IRepositories
 {
-    public interface IRabbitMQFunctions : IMessagingFunctions
-    {
-     
+    public interface IKafkaFunctions : IMessagingFunctions
+    {      
     }
 }

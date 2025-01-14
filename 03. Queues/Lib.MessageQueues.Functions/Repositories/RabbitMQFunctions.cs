@@ -24,6 +24,7 @@ namespace Lib.MessageQueues.Functions.Repositories
         #endregion
 
         #region Public Methods 
+        /* Función que crea las colas con base a lo parametrizado en la base de datos */
         public async Task CreateQueueAsync(string queueName, bool? durable, bool? exclusive, bool? autoDelete, int? MaxPriority, int? MessageLifeTime, int? QueueExpireTime, string? QueueMode, string? QueueDeadLetterExchange, string? QueueDeadLetterExchangeRoutingKey)
         {
             await Task.Run(() =>
@@ -37,6 +38,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                 Console.WriteLine($"Cola {queueName} creada y vinculada correctamente.");
             });
         }
+        /* Función que elimina todas las colas */
         public async Task DeleteQueues()
         {
             var client = new HttpClient();
@@ -58,6 +60,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                 Console.WriteLine($"Cola {queueName} eliminada exitosamente.");
             }
         }
+        /* Función que emite un mensaje pendiente */
         public async Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, DateTime birthday, int? comorbidities, int PlanRecord, Guid cityId, Guid processId)
         {
             var properties = channel.CreateBasicProperties();
@@ -67,6 +70,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                                  basicProperties: properties,
                                  body: BuildMessagePending(attentionId, patientId, cityId, processId));
         }
+        /* Función que emite un mensaje asignado */
         public async Task<string> EmitMessageAsign(string queueNameAsign, string queueNamePend, Guid HealthCareStaffId)
         {
             MessageInfo messageInfo = new();
@@ -89,12 +93,12 @@ namespace Lib.MessageQueues.Functions.Repositories
             }
             return string.Empty;
         }
-        public async Task EmitMessageInProcess(Guid messageId, string queueNameAsign, string queueNameInProcess) => await MoveMessageQueue(messageId, queueNameAsign, queueNameInProcess);
-        public async Task EmitMessageFinish(Guid messageId, string queueNameInProcess, string queueNameFinish) => await MoveMessageQueue(messageId, queueNameInProcess, queueNameFinish);
-
+        /* Función que emite un mensaje generico (En proceso, Finalizado, Cancelado) */
+        public async Task EmitGenericMessage(Guid messageId, string queueNameOrigin, string queueNameTarget) => await MoveMessageQueue(messageId, queueNameOrigin, queueNameTarget);
         #endregion
 
         #region Private Methods
+        /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
         private int? calculatedPriority(DateTime birthDate, int? comorbidities, int planRecord)
         {
             int age = DateTime.Now.Year - birthDate.Year;
@@ -108,6 +112,7 @@ namespace Lib.MessageQueues.Functions.Repositories
             priority += planRecord;
             return priority;
         }
+        /* Función que mapea las propiedades de los maestros de colas */
         private Dictionary<string, object> BuildArgumentsDictionary(int? MaxPriority, int? MessageLifeTime, int? QueueExpireTime, string? QueueMode, string? QueueDeadLetterExchange, string? QueueDeadLetterExchangeRoutingKey)
         {
             var arguments = new Dictionary<string, object>();
@@ -125,18 +130,21 @@ namespace Lib.MessageQueues.Functions.Repositories
                 arguments.Add("x-dead-letter-routing-key", QueueDeadLetterExchangeRoutingKey);
             return arguments;
         }
+        /* Función que construye un mensaje pendiente */
         private byte[] BuildMessagePending(Guid attentionId, Guid patientId, Guid CityId, Guid ProcessId)
         {
             MessageInfo objMessage = new MessageInfo { Id = attentionId.ToString(), PatientId = patientId.ToString(), CityId = CityId.ToString(), ProcessId = ProcessId.ToString() };
             string mensajeJson = JsonConvert.SerializeObject(objMessage);
             return Encoding.UTF8.GetBytes(mensajeJson);
         }
+        /* Función que construye un mensaje asignado */
         private MessageInfo BuildMessageAsign(BasicGetResult ea, string medicId)
         {
             var body = ea.Body.ToArray();
             var mensaje = Encoding.UTF8.GetString(body);
             return JsonConvert.DeserializeObject<MessageInfo>(mensaje);
         }
+        /* Función que abre el canal de rabbitmq */
         private void OpenChannel()
         {
             if (connection == null || !connection.IsOpen)
@@ -150,6 +158,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                 channel.ExchangeDeclare("citaExchange", "direct", durable: true, autoDelete: false);
             }
         }
+        /* Función que cierra el canal de rabbitmq */
         private void CloseChannel()
         {
             try
@@ -171,42 +180,37 @@ namespace Lib.MessageQueues.Functions.Repositories
                 Console.WriteLine($"Error al cerrar el canal: {ex.Message}");
             }
         }
+        /* Función que mueve el mensaje de una cola a otra */
         private async Task MoveMessageQueue(Guid Id, string OriginNameQueue, string TargetNameQueue)
         {
             OpenChannel();
-            // Obtener el número total de mensajes en la cola "OriginNameQueue"
             var queueDeclareResult = channel.QueueDeclarePassive(OriginNameQueue);
             int totalMessagesInQueue = (int)queueDeclareResult.MessageCount;
-            int counter = 0; // Contador para saber cuántos mensajes hemos procesado
+            int counter = 0;
             bool foundMessage = false;
 
             var consumer = new EventingBasicConsumer(channel);
             consumer.Received += (model, ea) =>
             {
-                counter++; // Incrementar el contador por cada mensaje procesado
+                counter++;
                 var mensajeJson = Encoding.UTF8.GetString(ea.Body.ToArray());
                 dynamic objMessage = JsonConvert.DeserializeObject(mensajeJson);
 
                 if (objMessage.Id == Id)
                 {
-                    // Si encontramos el mensaje, lo movemos a la cola "TargetNameQueue"
                     channel.BasicPublish(exchange: "", routingKey: TargetNameQueue, basicProperties: null, body: ea.Body);
                     channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                     foundMessage = true;
                 }
             };
-
-            // Consumir los mensajes de la cola "OriginNameQueue"
             channel.BasicConsume(queue: OriginNameQueue, autoAck: false, consumer: consumer);
 
-            // Continuar hasta encontrar el mensaje o procesar todos los mensajes
             while (!foundMessage && counter < totalMessagesInQueue)
-                Thread.Sleep(500); // Esperar un poco antes de intentar nuevamente
+                Thread.Sleep(500);
 
             if (!foundMessage)
                 Console.WriteLine("No se encontró el mensaje después de revisar todos los mensajes en la cola.");
 
-            // Cerrar el canal
             CloseChannel();
         }
         #endregion

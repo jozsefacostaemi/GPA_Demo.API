@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 
@@ -15,27 +16,37 @@ namespace Web.Queue.API.Controllers
         }
 
         [HttpPost("EmitAttention")]
-        public async Task<bool> EmitAttention(ProcessEnum processEnum, Guid PatientId)
+        public async Task<RequestResult> EmitAttention(ProcessEnum processEnum, Guid PatientId)
         {
-            return await _emitMessageRepository.EmitAttention(processEnum, PatientId);
+            return await _emitMessageRepository.CreateAttention(processEnum, PatientId);
         }
 
         [HttpPost("AssignAttention")]
-        public async Task<bool> AssignAttention(Guid HealthCareStaffId)
+        public async Task<RequestResult> AssignAttention(Guid HealthCareStaffId)
         {
             return await _emitMessageRepository.AssignAttention(HealthCareStaffId);
         }
 
         [HttpPost("StartAttention")]
-        public async Task<bool> StartAttention(Guid AttentionId)
+        public async Task<RequestResult> StartAttention(Guid AttentionId)
         {
-            return await _emitMessageRepository.StartAttention(AttentionId);
+            return await _emitMessageRepository.InitAttention(AttentionId);
         }
 
         [HttpPost("FinishAttention")]
-        public async Task<bool> FinishAttention(Guid AttentionId)
+        public async Task<RequestResult> FinishAttention(Guid AttentionId)
         {
-            return await _emitMessageRepository.FinishAttention(AttentionId);
+            return await _emitMessageRepository.EndAttention(AttentionId);
+        }
+        [HttpPost("CancelAttention")]
+        public async Task<RequestResult> CancelAttention(Guid AttentionId)
+        {
+            return await _emitMessageRepository.CancelAttention(AttentionId);
+        }
+        [HttpPost("AvailableHealthCareScaff")]
+        public async Task<RequestResult> AvailableHealthCareScaff(Guid HealthCareStaffId)
+        {
+            return await _emitMessageRepository.AvailableHealthCareScaff(HealthCareStaffId);
         }
     }
 }

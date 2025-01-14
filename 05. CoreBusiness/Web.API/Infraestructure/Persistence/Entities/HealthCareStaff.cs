@@ -13,7 +13,7 @@ public partial class HealthCareStaff
 
     public Guid ProcessId { get; set; }
 
-    public Guid PersonStateId { get; set; }
+    public Guid? PersonStateId { get; set; }
 
     public bool Active { get; set; }
 
@@ -21,5 +21,5 @@ public partial class HealthCareStaff
 
     public virtual City City { get; set; } = null!;
 
-    public virtual PersonState PersonState { get; set; } = null!;
+    public virtual PersonState? PersonState { get; set; }
 }

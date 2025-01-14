@@ -11,10 +11,6 @@ namespace Web.Core.Business.API.Enums
         STA = 2,
 
         [EnumMember(Value = "PRE")]
-        PRE = 3,
-
-
-
-
+        PRE = 3
     }
 }

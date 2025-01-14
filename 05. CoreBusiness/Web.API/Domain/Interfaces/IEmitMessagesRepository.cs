@@ -1,12 +1,15 @@
-﻿using Web.Core.Business.API.Enums;
+﻿using Shared;
+using Web.Core.Business.API.Enums;
 
 namespace Web.Core.Business.API.Domain.Interfaces
 {
     public interface IEmitMessagesRepository
     {
-        Task<bool> EmitAttention(ProcessEnum processEnum, Guid patientId);
-        Task<bool> AssignAttention(Guid HealthCareStaffId);
-        Task<bool> StartAttention(Guid AttentionId);
-        Task<bool> FinishAttention(Guid AttentionId);
+        Task<RequestResult> CreateAttention(ProcessEnum processEnum, Guid patientId);
+        Task<RequestResult> AssignAttention(Guid HealthCareStaffId);
+        Task<RequestResult> InitAttention(Guid AttentionId);
+        Task<RequestResult> EndAttention(Guid AttentionId);
+        Task<RequestResult> CancelAttention(Guid AttentionId);
+        Task<RequestResult> AvailableHealthCareScaff(Guid HealthCareStaffId);
     }
 }

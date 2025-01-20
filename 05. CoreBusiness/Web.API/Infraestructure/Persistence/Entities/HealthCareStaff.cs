@@ -22,4 +22,6 @@ public partial class HealthCareStaff
     public virtual City City { get; set; } = null!;
 
     public virtual PersonState? PersonState { get; set; }
+
+    public virtual Processor Process { get; set; } = null!;
 }

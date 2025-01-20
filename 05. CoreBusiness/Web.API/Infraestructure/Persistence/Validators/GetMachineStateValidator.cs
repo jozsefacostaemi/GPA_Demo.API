@@ -19,8 +19,11 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Validators
             if (patient.PersonStateId != null &&
                 (!new List<string> { PersonStateEnum.ATEN.ToString(), PersonStateEnum.CANC.ToString(), PersonStateEnum.VAC.ToString() }.Contains(patient.PersonState.Code)))
                 return (false, $"El paciente no tiene un estado valido para crear la atención! \nEstado actual: {patient.PersonState.Name}");
-            else
-                return (true, "Validación correcta!");
+
+            var validationCanNotCreateAttention = await CanNotCreateAttention(PatientId);
+            if(validationCanNotCreateAttention == true) return (false, "El paciente tiene una cita en curso!");
+
+            return (true, "Validación correcta!");
         }
         /* Precondiciones para la asignación de una atención */
         public async Task<(bool, string)> AsignationPreconditions(Guid HealthCareStaffId)
@@ -87,7 +90,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Validators
             {
                 var HealthCareStaff = await GetInfoHealthCareStaff((Guid)HealthCareStaffId);
                 if (HealthCareStaff == null) return (false, "El personal asistencial no existe");
-                if (HealthCareStaff.PersonState != null && (!HealthCareStaff.PersonState.Code.Equals(PersonStateEnum.ENPRO.ToString()) || HealthCareStaff.PersonState.Code.Equals(PersonStateEnum.ASIG.ToString())))
+                if (HealthCareStaff.PersonState != null && (!HealthCareStaff.PersonState.Code.Equals(PersonStateEnum.ENPRO.ToString()) && !HealthCareStaff.PersonState.Code.Equals(PersonStateEnum.ASIG.ToString())))
                     return (false, $"El personal asistencial no tiene estado Asignado o En proceso! \nEstado actual: {HealthCareStaff.PersonState.Name}");
 
             }
@@ -108,6 +111,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Validators
         private async Task<HealthCareStaff?> GetInfoHealthCareStaff(Guid HealthCareStaffId) => await _context.HealthCareStaffs.AsNoTracking().Include(x => x.PersonState).SingleOrDefaultAsync(x => x.Id.Equals(HealthCareStaffId));
         /* Función que consulta la información de una atención */
         private async Task<Attention?> GetInfoAttention(Guid AttentionId) => await _context.Attentions.AsNoTracking().Include(x => x.AttentionState).SingleOrDefaultAsync(x => x.Id.Equals(AttentionId));
+        /* Función que consulta si el paciente tiene una atención abierta en el sistema */
+        private async Task<bool> CanNotCreateAttention(Guid Patient) => await _context.Attentions.Where(x => x.Open == true && x.Active == true).AnyAsync();
         #endregion
     }
 }

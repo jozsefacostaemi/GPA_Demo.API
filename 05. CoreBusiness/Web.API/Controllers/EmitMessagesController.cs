@@ -43,10 +43,5 @@ namespace Web.Queue.API.Controllers
         {
             return await _emitMessageRepository.CancelAttention(AttentionId);
         }
-        [HttpPost("AvailableHealthCareScaff")]
-        public async Task<RequestResult> AvailableHealthCareScaff(Guid HealthCareStaffId)
-        {
-            return await _emitMessageRepository.AvailableHealthCareScaff(HealthCareStaffId);
-        }
     }
 }

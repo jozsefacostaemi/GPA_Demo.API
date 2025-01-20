@@ -21,6 +21,8 @@ public partial class Patient
 
     public Guid? PersonStateId { get; set; }
 
+    public string Identification { get; set; } = null!;
+
     public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
 
     public virtual City? City { get; set; }

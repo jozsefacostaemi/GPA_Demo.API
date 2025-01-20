@@ -23,6 +23,8 @@ public partial class Attention
 
     public bool? Active { get; set; }
 
+    public Guid? ProcessId { get; set; }
+
     public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
 
     public virtual AttentionState AttentionState { get; set; } = null!;
@@ -30,4 +32,6 @@ public partial class Attention
     public virtual HealthCareStaff? HealthCareStaff { get; set; }
 
     public virtual Patient Patient { get; set; } = null!;
+
+    public virtual Processor? Process { get; set; }
 }

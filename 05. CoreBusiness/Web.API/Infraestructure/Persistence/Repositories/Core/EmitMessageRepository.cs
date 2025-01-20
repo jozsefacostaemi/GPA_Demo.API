@@ -10,7 +10,7 @@ using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMachine;
 using Web.Core.Business.API.Infraestructure.Persistence.Validators;
 
-namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMessage
+namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 {
     public class EmitMessageRepository : IEmitMessagesRepository
     {
@@ -45,12 +45,12 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
             var getNameQueueGenerated = await GetGeneratedQueue(process.Id, (Guid)patient.CityId, (Guid)machineStates.attentionStateActualId);
             if (string.IsNullOrEmpty(getNameQueueGenerated))
                 return RequestResult.ErrorResult(message: "No existe una cola para la ciudad, el proceso y el estado indicado");
-            var attentionId = await CreateAttention(patientId, (Guid)machineStates.attentionStateActualId, process.Name);
+            var attentionId = await CreateAttention(process.Id, patientId, (Guid)machineStates.attentionStateActualId, process.Name);
             await InsertHistoryAttention(attentionId, (Guid)machineStates.attentionStateActualId);
             var planRecord = patient.PlanCode == PlanEnum.BAS.ToString() ? 1 : patient.PlanCode == PlanEnum.STA.ToString() ? 2 : patient.PlanCode == PlanEnum.PRE.ToString() ? 3 : 0;
             await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId, (DateTime)patient.Birthday, patient.Comorbidities, planRecord, (Guid)patient.CityId, process.Id);
             await UpdateStates(attentionId, (Guid)machineStates.attentionStateActualId, null, null, (Guid)machineStates.patientStateId);
-            return RequestResult.SuccessRecord(data: attentionId);
+            return RequestResult.SuccessRecord(message : "Creación de atención exitosa", data: attentionId);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
         public async Task<RequestResult> AssignAttention(Guid HealthCareStaffId)
@@ -68,7 +68,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
             if (string.IsNullOrEmpty(resultEmitMessageAttention)) return RequestResult.ErrorResult($"No se encontró información para la cola de asignación");
             await InsertHistoryAttention(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateActualId);
             await UpdateStates(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateActualId, HealthCareStaffId, (Guid)machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId);
-            return RequestResult.SuccessRecord($"Asignación de cita exitosa:  {resultEmitMessageAttention}");
+            return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: resultEmitMessageAttention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */
         public async Task<RequestResult> InitAttention(Guid AttentionId) => await EmitAttention(AttentionId, StateEventProcessEnum.INITIATION);
@@ -76,25 +76,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
         public async Task<RequestResult> EndAttention(Guid AttentionId) => await EmitAttention(AttentionId, StateEventProcessEnum.ENDING);
         /* Función que cancela la atención */
         public async Task<RequestResult> CancelAttention(Guid AttentionId) => await EmitAttention(AttentionId, StateEventProcessEnum.CANCELLATION);
-        /* Función que actualiza el estado del personal asistencial a disponible */
-        public async Task<RequestResult> AvailableHealthCareScaff(Guid HealthCareStaffId)
-        {
-            Guid? StateAvailable = await _context.PersonStates.Where(x => x.Code.Equals(PersonStateEnum.DISP.ToString())).Select(x => x.Id).SingleOrDefaultAsync();
-            if (StateAvailable == null) return RequestResult.ErrorResult("No existe el estado Disponible");
-
-            var HealthCareStaff = await _context.HealthCareStaffs.Include(x => x.PersonState).SingleOrDefaultAsync(x => x.Id.Equals(HealthCareStaffId));
-            if (HealthCareStaff != null)
-            {
-                if (HealthCareStaff.PersonState.Code.Equals(PersonStateEnum.REC.ToString()))
-                {
-                    HealthCareStaff.PersonStateId = StateAvailable;
-                    await _context.SaveChangesAsync();
-                    return RequestResult.SuccessOperation();
-                }
-                else return RequestResult.ErrorResult("El estado del personal asistencial debe ser En receso");
-            }
-            return RequestResult.ErrorResult("No existe el personal asistencial indicado");
-        }
         #endregion
 
         #region Private Methods
@@ -115,11 +96,12 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
         /* Función que obtiene el nombre de la cola con base al proceso, ciudad y estado */
         private async Task<string?> GetGeneratedQueue(Guid processId, Guid cityId, Guid StateId) => await _context.GeneratedQueues.Where(x => x.ConfigQueue.ProcessId.Equals(processId) && x.ConfigQueue.AttentionStateId.Equals(StateId) && x.ConfigQueue.CityId.Equals(cityId)).Select(x => x.Name).FirstOrDefaultAsync();
         /* Función que guarda la atención  */
-        private async Task<Guid> CreateAttention(Guid PatientId, Guid State, string Origin)
+        private async Task<Guid> CreateAttention(Guid processId, Guid PatientId, Guid State, string Origin)
         {
             var attention = new Attention
             {
                 Id = Guid.NewGuid(),
+                ProcessId = processId,
                 PatientId = PatientId,
                 Open = true,
                 StartDate = DateTime.Now,
@@ -146,6 +128,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
                 attention.AttentionStateId = AttentionStateId;
                 attention.HealthCareStaffId = HealthCareStaffId;
                 attention.Open = applyClosed ? false : attention.Open;
+                attention.EndDate = applyClosed ? DateTime.Now : attention.EndDate;
             }
             if (HealthCareStaffId.HasValue)
             {
@@ -172,7 +155,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
                 CityId = x.HealthCareStaff != null ? x.HealthCareStaff.CityId : Guid.Empty,
                 ProcessId = x.HealthCareStaff != null ? x.HealthCareStaff.ProcessId : Guid.Empty,
                 PatientId = x.PatientId != null ? x.PatientId : Guid.Empty,
-                AttentionStateId = x.AttentionStateId
+                x.AttentionStateId
 
             }).SingleOrDefaultAsync();
         /* Función que realiza proceso de proceso genericos */
@@ -190,9 +173,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.EmitMes
             if (string.IsNullOrEmpty(getNameQueueAsignedGenerated) || string.IsNullOrEmpty(getNameQueuePendingGenerated)) return RequestResult.ErrorResult($"No existen colas configuradas para el proceso, ciudad e información para el evento de proceso {eventProcess}");
             await _messagingFunctions.EmitGenericMessage(AttentionId, getNameQueuePendingGenerated, getNameQueueAsignedGenerated);
             await InsertHistoryAttention(AttentionId, (Guid)machineStates.attentionStateActualId);
-            await UpdateStates(AttentionId, (Guid)machineStates.attentionStateActualId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, (eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING) ? true : false);
+            await UpdateStates(AttentionId, (Guid)machineStates.attentionStateActualId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING ? true : false);
             string result = eventProcess == StateEventProcessEnum.CANCELLATION ? "Cancelación de atención exitosa" : eventProcess == StateEventProcessEnum.ENDING ? "Finalización de atención exitosa" : eventProcess == StateEventProcessEnum.INITIATION ? "Inicio de atención exitosa" : "Proceso realizado con éxito";
-            return RequestResult.SuccessRecord(result);
+            return RequestResult.SuccessRecord(data: AttentionId, message: result);
         }
         #endregion
     }

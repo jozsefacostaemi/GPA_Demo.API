@@ -43,7 +43,7 @@ public partial class ApplicationDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=DESKTOP-0SDTHPP\\SQLEXPRESS;Database=GPA_Demo;Trusted_Connection=True;TrustServerCertificate=true;");
+        => optionsBuilder.UseSqlServer("Server=localhost;Database=GPA_Demo;Trusted_Connection=True;TrustServerCertificate=true;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -68,6 +68,10 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.PatientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attentions_Patients");
+
+            entity.HasOne(d => d.Process).WithMany(p => p.Attentions)
+                .HasForeignKey(d => d.ProcessId)
+                .HasConstraintName("FK_Attentions_Processor");
         });
 
         modelBuilder.Entity<AttentionHistory>(entity =>
@@ -195,6 +199,11 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.PersonState).WithMany(p => p.HealthCareStaffs)
                 .HasForeignKey(d => d.PersonStateId)
                 .HasConstraintName("FK_HealthCareStaffs_PersonStates");
+
+            entity.HasOne(d => d.Process).WithMany(p => p.HealthCareStaffs)
+                .HasForeignKey(d => d.ProcessId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_HealthCareStaffs_Processor");
         });
 
         modelBuilder.Entity<Patient>(entity =>
@@ -205,6 +214,7 @@ public partial class ApplicationDbContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
             entity.Property(e => e.Birthday).HasColumnType("datetime");
+            entity.Property(e => e.Identification).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(50);
 
             entity.HasOne(d => d.City).WithMany(p => p.Patients)

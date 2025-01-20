@@ -13,5 +13,9 @@ public partial class Processor
 
     public bool Active { get; set; }
 
+    public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
+
     public virtual ICollection<ConfQueue> ConfQueues { get; set; } = new List<ConfQueue>();
+
+    public virtual ICollection<HealthCareStaff> HealthCareStaffs { get; set; } = new List<HealthCareStaff>();
 }

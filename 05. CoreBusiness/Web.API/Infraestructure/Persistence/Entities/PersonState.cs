@@ -13,6 +13,10 @@ public partial class PersonState
 
     public bool Active { get; set; }
 
+    public bool? IsHealthCareStaff { get; set; }
+
+    public bool? IsPatient { get; set; }
+
     public virtual ICollection<HealthCareStaff> HealthCareStaffs { get; set; } = new List<HealthCareStaff>();
 
     public virtual ICollection<Patient> Patients { get; set; } = new List<Patient>();

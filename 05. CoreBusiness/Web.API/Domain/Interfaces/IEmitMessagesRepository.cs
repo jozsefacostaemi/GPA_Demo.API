@@ -10,6 +10,5 @@ namespace Web.Core.Business.API.Domain.Interfaces
         Task<RequestResult> InitAttention(Guid AttentionId);
         Task<RequestResult> EndAttention(Guid AttentionId);
         Task<RequestResult> CancelAttention(Guid AttentionId);
-        Task<RequestResult> AvailableHealthCareScaff(Guid HealthCareStaffId);
     }
 }

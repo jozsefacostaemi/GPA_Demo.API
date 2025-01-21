@@ -13,6 +13,8 @@ namespace Web.Core.Business.API.Controllers
         {
             _ihealthCareStaffRepository = ihealthCareStaffRepository;
         }
+        [HttpGet("GetStateByHealthCareStaff")]
+        public async Task<RequestResult> GetStateByHealthCareStaff(Guid HealthCareStaff) => await _ihealthCareStaffRepository.GetStateByHealthCareStaff(HealthCareStaff);
 
         [HttpPost("UpdateStateForHealthCareStaff")]
         public async Task<RequestResult> UpdateStateForHealthCareStaff(Guid HealthCareStaff, string codeHealthCareStaff) => await _ihealthCareStaffRepository.UpdateStateForHealthCareStaff(HealthCareStaff, codeHealthCareStaff);

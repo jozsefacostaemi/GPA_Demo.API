@@ -3,6 +3,7 @@ using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
+using Web.Core.Business.API.Response;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 {
@@ -14,7 +15,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         public HealthCareStaffRepository(ApplicationDbContext context) => _context = context;
         public async Task<RequestResult> UpdateStateForHealthCareStaff(Guid HealthCareStaffId, string codeHealthCareStaff)
         {
-            if(!ValidChangeStates.Contains(codeHealthCareStaff)) 
+            if (!ValidChangeStates.Contains(codeHealthCareStaff))
                 return RequestResult.SuccessResultNoRecords(message: $"Por favor indique un código de estado valido (DISP ó REC)");
 
 
@@ -32,6 +33,18 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             HealthCareStaff.PersonStateId = stateForHealthCareStaff.Value;
             await _context.SaveChangesAsync();
             return RequestResult.SuccessOperation(message: "Estado del personal médico actualizado correctamente");
+        }
+
+
+        public async Task<RequestResult> GetStateByHealthCareStaff(Guid HealthCareStaffId)
+        {
+            HealthCareStaffResponse? HealthCareStaff = await _context.HealthCareStaffs
+                .Where(x => x.Id.Equals(HealthCareStaffId))
+                .Select(x => new HealthCareStaffResponse { ActualStateDesc = x.PersonState != null ? x.PersonState.Name : "N/A", ActualStateId = x.PersonStateId, ActualStateCode = x.PersonState != null ? x.PersonState.Code : "Vacio", HealthCareStaffId = x.Id, HealthCareStaffName = x.Name })
+                .FirstOrDefaultAsync();
+            if (HealthCareStaff == null)
+                return RequestResult.SuccessResultNoRecords(message: "No existe el medico con el id indicado");
+            return RequestResult.SuccessResult(data: HealthCareStaff);
         }
     }
 }

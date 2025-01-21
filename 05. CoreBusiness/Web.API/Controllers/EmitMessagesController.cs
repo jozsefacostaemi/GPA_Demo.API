@@ -16,9 +16,9 @@ namespace Web.Queue.API.Controllers
         }
 
         [HttpPost("EmitAttention")]
-        public async Task<RequestResult> EmitAttention(ProcessEnum processEnum, Guid PatientId)
+        public async Task<RequestResult> EmitAttention(string processCode, Guid PatientId)
         {
-            return await _emitMessageRepository.CreateAttention(processEnum, PatientId);
+            return await _emitMessageRepository.CreateAttention(processCode, PatientId);
         }
 
         [HttpPost("AssignAttention")]

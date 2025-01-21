@@ -33,7 +33,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 
         #region Public Methods
         /* Función que dispara mensaje en cola Pendiente según el proceso seleccionado */
-        public async Task<RequestResult> CreateAttention(ProcessEnum processEnum, Guid patientId)
+        public async Task<RequestResult> CreateAttention(string processCode, Guid patientId)
         {
             var validate = await _getMachineStateValidator.CreationPreconditions(patientId);
             if (!validate.Item1)
@@ -41,7 +41,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var machineStates = await _getStatesRepository.GetMachineStates(StateEventProcessEnum.CREATION);
             if (machineStates == null) return RequestResult.ErrorResult($"No existe información para el proceso {StateEventProcessEnum.CREATION}");
             var patient = await GetInfoPatient(patientId);
-            var process = await GetProcessor(processEnum.ToString());
+            if (patient == null) return RequestResult.ErrorResult(message: "El ID del paciente indicado no existe");
+            var process = await GetProcessor(processCode);
+            if(process == null) return RequestResult.ErrorResult(message: "El código de proceso indicado no existe");
             var getNameQueueGenerated = await GetGeneratedQueue(process.Id, (Guid)patient.CityId, (Guid)machineStates.attentionStateActualId);
             if (string.IsNullOrEmpty(getNameQueueGenerated))
                 return RequestResult.ErrorResult(message: "No existe una cola para la ciudad, el proceso y el estado indicado");
@@ -50,7 +52,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var planRecord = patient.PlanCode == PlanEnum.BAS.ToString() ? 1 : patient.PlanCode == PlanEnum.STA.ToString() ? 2 : patient.PlanCode == PlanEnum.PRE.ToString() ? 3 : 0;
             await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId, (DateTime)patient.Birthday, patient.Comorbidities, planRecord, (Guid)patient.CityId, process.Id);
             await UpdateStates(attentionId, (Guid)machineStates.attentionStateActualId, null, null, (Guid)machineStates.patientStateId);
-            return RequestResult.SuccessRecord(message : "Creación de atención exitosa", data: attentionId);
+            return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: attentionId);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
         public async Task<RequestResult> AssignAttention(Guid HealthCareStaffId)

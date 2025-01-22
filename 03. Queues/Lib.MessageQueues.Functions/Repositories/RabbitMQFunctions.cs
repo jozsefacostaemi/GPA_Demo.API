@@ -61,10 +61,10 @@ namespace Lib.MessageQueues.Functions.Repositories
             }
         }
         /* Función que emite un mensaje pendiente */
-        public async Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, DateTime birthday, int? comorbidities, int PlanRecord, Guid cityId, Guid processId)
+        public async Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, Guid cityId, Guid processId, byte priority)
         {
             var properties = channel.CreateBasicProperties();
-            properties.Priority = (byte)calculatedPriority(birthday, comorbidities, PlanRecord);
+            properties.Priority = priority;
             channel.BasicPublish(exchange: "",
                                  routingKey: queueName,
                                  basicProperties: properties,
@@ -98,20 +98,6 @@ namespace Lib.MessageQueues.Functions.Repositories
         #endregion
 
         #region Private Methods
-        /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
-        private int? calculatedPriority(DateTime birthDate, int? comorbidities, int planRecord)
-        {
-            int age = DateTime.Now.Year - birthDate.Year;
-            if (DateTime.Now < birthDate.AddYears(age))
-                age--;
-            int? priority = comorbidities;
-            if (age >= 18 && age < 60)
-                priority += 1;
-            else
-                priority += 2;
-            priority += planRecord;
-            return priority;
-        }
         /* Función que mapea las propiedades de los maestros de colas */
         private Dictionary<string, object> BuildArgumentsDictionary(int? MaxPriority, int? MessageLifeTime, int? QueueExpireTime, string? QueueMode, string? QueueDeadLetterExchange, string? QueueDeadLetterExchangeRoutingKey)
         {

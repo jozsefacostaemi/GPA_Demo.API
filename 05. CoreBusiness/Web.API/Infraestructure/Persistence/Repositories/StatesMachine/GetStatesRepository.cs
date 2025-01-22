@@ -42,7 +42,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                 case StateEventProcessEnum.ENDING:
 
                     var endingPatientState = await GetPersonState(PersonStateEnum.ATEN);
-                    var endingHealthCareScaffState = await GetPersonState(PersonStateEnum.REC);
+                    var endingHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var endingAttentionState = await GetAttentionState(AttentionStateEnum.FINA);
                     var inProcessPreviousAttentionState = await GetAttentionState(AttentionStateEnum.ENPRO);
                     return new StatesMachineResponse { patientStateId = endingPatientState, healthCareStaffStateId = endingHealthCareScaffState, attentionStateActualId = endingAttentionState, attentionStatePreviousId = inProcessPreviousAttentionState };
@@ -50,7 +50,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                 case StateEventProcessEnum.CANCELLATION:
 
                     var cancelPatientState = await GetPersonState(PersonStateEnum.CANC);
-                    var cancelHealthCareScaffState = await GetPersonState(PersonStateEnum.REC);
+                    var cancelHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var cancelAttentionState = await GetAttentionState(AttentionStateEnum.CANC);
                     return new StatesMachineResponse { patientStateId = cancelPatientState, healthCareStaffStateId = cancelHealthCareScaffState, attentionStateActualId = cancelAttentionState };
                 default:

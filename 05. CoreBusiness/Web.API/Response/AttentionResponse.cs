@@ -6,6 +6,7 @@
         public string HealthCareStaff { get; set; }
         public string Patient { get; set; }
         public string Process { get; set; }
+        public int Priority { get; set; }
         public string City { get; set; }
         public int Comorbities { get; set; }
         public string State { get; set; }

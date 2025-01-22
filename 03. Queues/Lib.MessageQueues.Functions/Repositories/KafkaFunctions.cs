@@ -67,7 +67,7 @@ namespace Lib.MessageQueues.Functions.Repositories
 
         }
 
-        public async Task EmitMessagePending(string topicName, Guid attentionId, Guid patientId, DateTime birthday, int? comorbidities, int planRecord, Guid cityId, Guid processId)
+        public async Task EmitMessagePending(string topicName, Guid attentionId, Guid patientId, Guid cityId, Guid processId, byte priority)
         {
             var message = new MessageInfo
             {

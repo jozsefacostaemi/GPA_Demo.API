@@ -22,6 +22,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 .Select(x => new AttentionResponse
                 {
                     AttentionId = x.Id,
+                    Priority = x.Priority,
                     HealthCareStaff = x.HealthCareStaff != null ? x.HealthCareStaff.Name : "N/A",
                     Patient = x.Patient != null ? x.Patient.Name : "N/A",
                     Process = x.Process != null ? x.Process.Name : string.Empty,
@@ -33,7 +34,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     StartDate = x.StartDate.ToString(),
                     EndDate = x.EndDate != null ? $"{x.EndDate.Value.ToString()}" : string.Empty
                 })
-                .OrderBy(x => x.StartDate)
+                .OrderByDescending(x => x.StartDate)       
+                .ThenByDescending(x => x.Priority)
                 .ToListAsync();
             if (!getAttentions.Any())
                 return RequestResult.SuccessResultNoRecords();

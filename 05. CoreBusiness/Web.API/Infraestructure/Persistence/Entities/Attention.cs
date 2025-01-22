@@ -25,6 +25,8 @@ public partial class Attention
 
     public Guid? ProcessId { get; set; }
 
+    public int Priority { get; set; }
+
     public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
 
     public virtual AttentionState AttentionState { get; set; } = null!;

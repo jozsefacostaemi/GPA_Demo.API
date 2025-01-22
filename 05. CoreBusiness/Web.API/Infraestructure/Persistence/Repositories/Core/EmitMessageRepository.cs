@@ -47,10 +47,11 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var getNameQueueGenerated = await GetGeneratedQueue(process.Id, (Guid)patient.CityId, (Guid)machineStates.attentionStateActualId);
             if (string.IsNullOrEmpty(getNameQueueGenerated))
                 return RequestResult.ErrorResult(message: "No existe una cola para la ciudad, el proceso y el estado indicado");
-            var attentionId = await CreateAttention(process.Id, patientId, (Guid)machineStates.attentionStateActualId, process.Name);
-            await InsertHistoryAttention(attentionId, (Guid)machineStates.attentionStateActualId);
             var planRecord = patient.PlanCode == PlanEnum.BAS.ToString() ? 1 : patient.PlanCode == PlanEnum.STA.ToString() ? 2 : patient.PlanCode == PlanEnum.PRE.ToString() ? 3 : 0;
-            await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId, (DateTime)patient.Birthday, patient.Comorbidities, planRecord, (Guid)patient.CityId, process.Id);
+            int priority = calculatedPriority((DateTime)patient.Birthday, patient.Comorbidities, planRecord);
+            var attentionId = await CreateAttention(process.Id, patientId, (Guid)machineStates.attentionStateActualId, process.Name, priority);
+            await InsertHistoryAttention(attentionId, (Guid)machineStates.attentionStateActualId);
+            await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId,  (Guid)patient.CityId, process.Id, (byte)priority);
             await UpdateStates(attentionId, (Guid)machineStates.attentionStateActualId, null, null, (Guid)machineStates.patientStateId);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: attentionId);
         }
@@ -98,7 +99,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         /* Función que obtiene el nombre de la cola con base al proceso, ciudad y estado */
         private async Task<string?> GetGeneratedQueue(Guid processId, Guid cityId, Guid StateId) => await _context.GeneratedQueues.Where(x => x.ConfigQueue.ProcessId.Equals(processId) && x.ConfigQueue.AttentionStateId.Equals(StateId) && x.ConfigQueue.CityId.Equals(cityId)).Select(x => x.Name).FirstOrDefaultAsync();
         /* Función que guarda la atención  */
-        private async Task<Guid> CreateAttention(Guid processId, Guid PatientId, Guid State, string Origin)
+        private async Task<Guid> CreateAttention(Guid processId, Guid PatientId, Guid State, string Origin, int priority)
         {
             var attention = new Attention
             {
@@ -109,6 +110,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 StartDate = DateTime.Now,
                 Comments = "Cita creada desde: " + Origin,
                 Active = true,
+                Priority = priority,
                 AttentionStateId = State
             };
             await _context.AddAsync(attention);
@@ -178,6 +180,21 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await UpdateStates(AttentionId, (Guid)machineStates.attentionStateActualId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING ? true : false);
             string result = eventProcess == StateEventProcessEnum.CANCELLATION ? "Cancelación de atención exitosa" : eventProcess == StateEventProcessEnum.ENDING ? "Finalización de atención exitosa" : eventProcess == StateEventProcessEnum.INITIATION ? "Inicio de atención exitosa" : "Proceso realizado con éxito";
             return RequestResult.SuccessRecord(data: AttentionId, message: result);
+        }
+        /* Función que calcula la prioridad */
+        /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
+        private int? calculatedPriority(DateTime birthDate, int? comorbidities, int planRecord)
+        {
+            int age = DateTime.Now.Year - birthDate.Year;
+            if (DateTime.Now < birthDate.AddYears(age))
+                age--;
+            int? priority = comorbidities;
+            if (age >= 18 && age < 60)
+                priority += 1;
+            else
+                priority += 2;
+            priority += planRecord;
+            return priority;
         }
         #endregion
     }

@@ -13,6 +13,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins", builder =>
+        builder.WithOrigins("http://localhost:4200") // Permitir solo desde localhost:4200
+               .AllowAnyMethod()   // Permitir cualquier método (GET, POST, PUT, DELETE, etc.)
+               .AllowAnyHeader()); // Permitir cualquier encabezado
+});
+
 builder.Services.AddControllers();
 
 // Se agrega servicio de Swagger
@@ -44,6 +52,8 @@ builder.Services.AddScoped<IPatientRepository, PatientRepository>();
 #endregion
 
 var app = builder.Build();
+app.UseCors("AllowAllOrigins"); // Habilitar CORS para todos los orígenes permitidos
+app.UseRouting();
 app.UseAuthorization();
 app.UseSwagger();
 app.UseSwaggerUI(options =>
@@ -52,6 +62,9 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
-app.MapControllers();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
 
 app.Run();

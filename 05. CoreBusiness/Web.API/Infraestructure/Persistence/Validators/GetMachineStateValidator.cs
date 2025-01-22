@@ -17,7 +17,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Validators
             var patient = await GetInfoPatient(PatientId);
             if (patient == null) return (false, "El paciente no existe");
             if (patient.PersonStateId != null &&
-                (!new List<string> { PersonStateEnum.ATEN.ToString(), PersonStateEnum.CANC.ToString(), PersonStateEnum.VAC.ToString() }.Contains(patient.PersonState.Code)))
+                (!new List<string> { PersonStateEnum.ATEN.ToString(), PersonStateEnum.CANC.ToString(), PersonStateEnum.VAC.ToString(), PersonStateEnum.DISP.ToString() }.Contains(patient.PersonState.Code)))
                 return (false, $"El paciente no tiene un estado valido para crear la atención! \nEstado actual: {patient.PersonState.Name}");
 
             var validationCanNotCreateAttention = await CanNotCreateAttention(PatientId);

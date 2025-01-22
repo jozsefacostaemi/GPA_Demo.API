@@ -112,7 +112,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Validators
         /* Función que consulta la información de una atención */
         private async Task<Attention?> GetInfoAttention(Guid AttentionId) => await _context.Attentions.AsNoTracking().Include(x => x.AttentionState).SingleOrDefaultAsync(x => x.Id.Equals(AttentionId));
         /* Función que consulta si el paciente tiene una atención abierta en el sistema */
-        private async Task<bool> CanNotCreateAttention(Guid Patient) => await _context.Attentions.Where(x => x.Open == true && x.Active == true).AnyAsync();
+        private async Task<bool> CanNotCreateAttention(Guid Patient) => await _context.Attentions.Where(x => x.Patient.Equals(Patient) && x.Open == true && x.Active == true).AnyAsync();
         #endregion
     }
 }

@@ -19,6 +19,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var getAttentions = await _context.Attentions
                 .Where(z => !string.IsNullOrEmpty(processCode) ? z.Process.Code.Equals(processCode) : true)
                 .Where(z => lstExcludeStates != null ? !lstExcludeStates.Contains(z.AttentionState.Code) : true)
+                .OrderByDescending(x => x.StartDate)
+                .ThenByDescending(x => x.Priority)
                 .Select(x => new AttentionResponse
                 {
                     AttentionId = x.Id,
@@ -31,11 +33,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     Age = x.Patient != null && x.Patient.Birthday != null ? CalculatedAge.YearsMonthsDays(Convert.ToDateTime(x.Patient.Birthday)) : string.Empty,
                     State = x.AttentionState != null ? x.AttentionState.Name : string.Empty,
                     Plan = x.Patient != null && x.Patient.Plan != null ? x.Patient.Plan.Name : "N/A",
-                    StartDate = x.StartDate.ToString(),
+                    StartDate = x.StartDate.ToString("yyyy-MM-dd HH:mm:ss"),
                     EndDate = x.EndDate != null ? $"{x.EndDate.Value.ToString()}" : string.Empty
                 })
-                .OrderByDescending(x => x.StartDate)       
-                .ThenByDescending(x => x.Priority)
                 .ToListAsync();
             if (!getAttentions.Any())
                 return RequestResult.SuccessResultNoRecords();

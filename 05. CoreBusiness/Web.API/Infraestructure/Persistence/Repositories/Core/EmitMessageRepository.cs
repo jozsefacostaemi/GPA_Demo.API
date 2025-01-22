@@ -1,12 +1,11 @@
 ﻿using Lib.MessageQueues.Functions.IRepositories;
 using Lib.MessageQueues.Functions.Models;
-using Lib.MessageQueues.Functions.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Shared;
-using System.ComponentModel.DataAnnotations;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notifications;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMachine;
 using Web.Core.Business.API.Infraestructure.Persistence.Validators;
 
@@ -15,6 +14,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
     public class EmitMessageRepository : IEmitMessagesRepository
     {
         #region Variables
+        private readonly NotificationRepository _notificationService;
         private readonly ApplicationDbContext _context;
         private readonly IMessagingFunctions _messagingFunctions;
         private readonly GetMachineStateValidator _getMachineStateValidator;
@@ -22,12 +22,13 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         #endregion
 
         #region Ctor
-        public EmitMessageRepository(ApplicationDbContext context, MessagingFunctionsFactory messagingFunctionsFactory, GetMachineStateValidator getMachineStateValidator, GetStatesRepository getStatesRepository)
+        public EmitMessageRepository(ApplicationDbContext context, MessagingFunctionsFactory messagingFunctionsFactory, GetMachineStateValidator getMachineStateValidator, GetStatesRepository getStatesRepository, NotificationRepository notificationService)
         {
             _context = context;
             _messagingFunctions = messagingFunctionsFactory.GetMessagingFunctions();
             _getMachineStateValidator = getMachineStateValidator;
             _getStatesRepository = getStatesRepository;
+            _notificationService = notificationService;
         }
         #endregion
 
@@ -43,7 +44,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var patient = await GetInfoPatient(patientId);
             if (patient == null) return RequestResult.ErrorResult(message: "El ID del paciente indicado no existe");
             var process = await GetProcessor(processCode);
-            if(process == null) return RequestResult.ErrorResult(message: "El código de proceso indicado no existe");
+            if (process == null) return RequestResult.ErrorResult(message: "El código de proceso indicado no existe");
             var getNameQueueGenerated = await GetGeneratedQueue(process.Id, (Guid)patient.CityId, (Guid)machineStates.attentionStateActualId);
             if (string.IsNullOrEmpty(getNameQueueGenerated))
                 return RequestResult.ErrorResult(message: "No existe una cola para la ciudad, el proceso y el estado indicado");
@@ -51,8 +52,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             int priority = calculatedPriority((DateTime)patient.Birthday, patient.Comorbidities, planRecord);
             var attentionId = await CreateAttention(process.Id, patientId, (Guid)machineStates.attentionStateActualId, process.Name, priority);
             await InsertHistoryAttention(attentionId, (Guid)machineStates.attentionStateActualId);
-            await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId,  (Guid)patient.CityId, process.Id, (byte)priority);
+            await _messagingFunctions.EmitMessagePending(getNameQueueGenerated, attentionId, patientId, (Guid)patient.CityId, process.Id, (byte)priority);
             await UpdateStates(attentionId, (Guid)machineStates.attentionStateActualId, null, null, (Guid)machineStates.patientStateId);
+            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.EmmitAttention, attentionId);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: attentionId);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
@@ -71,6 +73,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (string.IsNullOrEmpty(resultEmitMessageAttention)) return RequestResult.ErrorResult($"No se encontró información para la cola de asignación");
             await InsertHistoryAttention(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateActualId);
             await UpdateStates(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateActualId, HealthCareStaffId, (Guid)machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId);
+            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.AssignedAttention, resultEmitMessageAttention);
             return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: resultEmitMessageAttention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */
@@ -178,10 +181,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await _messagingFunctions.EmitGenericMessage(AttentionId, getNameQueuePendingGenerated, getNameQueueAsignedGenerated);
             await InsertHistoryAttention(AttentionId, (Guid)machineStates.attentionStateActualId);
             await UpdateStates(AttentionId, (Guid)machineStates.attentionStateActualId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING ? true : false);
-            string result = eventProcess == StateEventProcessEnum.CANCELLATION ? "Cancelación de atención exitosa" : eventProcess == StateEventProcessEnum.ENDING ? "Finalización de atención exitosa" : eventProcess == StateEventProcessEnum.INITIATION ? "Inicio de atención exitosa" : "Proceso realizado con éxito";
-            return RequestResult.SuccessRecord(data: AttentionId, message: result);
+            var processResult = await GetAndEmitProcessResult(eventProcess, AttentionId.ToString());
+            return RequestResult.SuccessRecord(data: AttentionId, message: processResult);
         }
-        /* Función que calcula la prioridad */
         /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
         private int? calculatedPriority(DateTime birthDate, int? comorbidities, int planRecord)
         {
@@ -195,6 +197,29 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 priority += 2;
             priority += planRecord;
             return priority;
+        }
+        /* Función que devuelve resultado string y emite evento de SignalR */
+        private async Task<string> GetAndEmitProcessResult(StateEventProcessEnum StateEventProcessEnum, string AttentionId)
+        {
+            switch (StateEventProcessEnum)
+            {
+                case StateEventProcessEnum.INITIATION:
+                    {
+                        await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.InProcessAttention, AttentionId);
+                        return "Inicio de atención exitosa";
+                    }
+                case StateEventProcessEnum.ENDING:
+                    {
+                        await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.FinishAttention, AttentionId);
+                        return "Finalización de atención exitosa";
+                    }
+                case StateEventProcessEnum.CANCELLATION:
+                    {
+                        await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.CancelAttention, AttentionId);
+                        return "Cancelación de atención exitosa";
+                    }
+            }
+            return "Proceso realizado con éxito";
         }
         #endregion
     }

@@ -2,9 +2,11 @@ using Lib.MessageQueues.Functions.IRepositories;
 using Lib.MessageQueues.Functions.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Notification.Lib;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notifications;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMachine;
 using Web.Core.Business.API.Infraestructure.Persistence.Validators;
@@ -20,6 +22,8 @@ builder.Services.AddCors(options =>
                .AllowAnyMethod()   // Permitir cualquier método (GET, POST, PUT, DELETE, etc.)
                .AllowAnyHeader()); // Permitir cualquier encabezado
 });
+
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 
@@ -47,7 +51,7 @@ builder.Services.AddScoped<IAttentionRepository, AttentionRepository>();
 builder.Services.AddScoped<IGenericStatesRepository, GenericStatesRepository>();
 builder.Services.AddScoped<IHealthCareStaffRepository, HealthCareStaffRepository>();
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
-
+builder.Services.AddScoped<NotificationRepository>();
 
 #endregion
 
@@ -65,6 +69,8 @@ app.UseSwaggerUI(options =>
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
+    endpoints.MapHub<EventHub>("/eventHub"); 
 });
+
 
 app.Run();

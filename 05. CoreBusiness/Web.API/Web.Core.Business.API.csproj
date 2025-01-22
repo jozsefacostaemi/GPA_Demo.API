@@ -30,4 +30,10 @@
     <ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Notifications.Lib">
+      <HintPath>..\..\02. Notifications\Notifications.Lib\bin\Debug\net8.0\Notifications.Lib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
-using Web.Core.Business.API.DTOs;
+using Web.Core.Business.API.DTOs.Input;
 using Web.Core.Business.API.Enums;
 
 namespace Web.Queue.API.Controllers

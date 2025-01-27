@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Net.NetworkInformation;
 using Web.Core.Business.API.Domain.Interfaces;
+using Web.Core.Business.API.DTOs.Input;
+using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 
 namespace Web.Core.Business.API.Controllers
 {
@@ -15,11 +17,5 @@ namespace Web.Core.Business.API.Controllers
 
         [HttpPost("GeneratedConfigQueues")]
         public async Task<bool> GeneratedConfigQueues() => await _queueRepository.GeneratedConfigQueues();
-
-        [HttpPost("CreatedQueues")]
-        public async Task<bool> CreatedQueues() => await _queueRepository.CreatedQueues();
-
-        [HttpDelete("DeleteQueues")]
-        public async Task<bool> DeleteQueues() => await _queueRepository.DeleteQueues();
     }
 }

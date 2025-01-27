@@ -13,5 +13,7 @@ public partial class GeneratedQueue
 
     public bool? Active { get; set; }
 
+    public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
+
     public virtual ConfQueue ConfigQueue { get; set; } = null!;
 }

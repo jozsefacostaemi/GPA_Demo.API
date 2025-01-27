@@ -3,6 +3,8 @@
     public class AttentionResponse
     {
         public Guid? AttentionId { get; set; }
+        public Guid? HealthCareStaffId { get; set; }
+        public Guid? PatientId { get; set; }
         public string HealthCareStaff { get; set; }
         public string Patient { get; set; }
         public string Process { get; set; }

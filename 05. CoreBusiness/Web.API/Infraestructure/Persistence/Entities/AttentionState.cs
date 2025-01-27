@@ -13,6 +13,8 @@ public partial class AttentionState
 
     public bool Active { get; set; }
 
+    public string Color { get; set; } = null!;
+
     public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
 
     public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();

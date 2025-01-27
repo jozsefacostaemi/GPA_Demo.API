@@ -12,7 +12,7 @@ namespace Lib.MessageQueues.Functions.IRepositories
         Task DeleteQueues();
         Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, Guid cityId, Guid processId, byte priority);
         Task<string> EmitMessageAsign(string queueNameAsign, string queueNamePend, Guid HealthCareStaffId);
-        Task EmitGenericMessage(Guid id, string queueNameOrigin, string queueNameTarget);
+        Task<bool> EmitGenericMessage(Guid id, string queueNameActual, string queueNameTarget);
         
     }
 }

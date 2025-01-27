@@ -9,7 +9,7 @@ public partial class Patient
 
     public string? Name { get; set; }
 
-    public Guid? CityId { get; set; }
+    public Guid CityId { get; set; }
 
     public Guid? PlanId { get; set; }
 
@@ -23,9 +23,13 @@ public partial class Patient
 
     public string Identification { get; set; } = null!;
 
+    public Guid BusinessLineId { get; set; }
+
     public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
 
-    public virtual City? City { get; set; }
+    public virtual BusinessLine BusinessLine { get; set; } = null!;
+
+    public virtual City City { get; set; } = null!;
 
     public virtual PersonState? PersonState { get; set; }
 

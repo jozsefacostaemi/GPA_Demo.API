@@ -7,11 +7,7 @@ public partial class ConfQueue
 {
     public Guid Id { get; set; }
 
-    public Guid? CityId { get; set; }
-
-    public Guid? ProcessId { get; set; }
-
-    public Guid? AttentionStateId { get; set; }
+    public Guid AttentionStateId { get; set; }
 
     public bool? Durable { get; set; }
 
@@ -37,11 +33,11 @@ public partial class ConfQueue
 
     public string? QueueDeadLetterExchangeRoutingKey { get; set; }
 
-    public virtual AttentionState? AttentionState { get; set; }
+    public Guid BusinessLineLevelValueQueueConfId { get; set; }
 
-    public virtual City? City { get; set; }
+    public virtual AttentionState AttentionState { get; set; } = null!;
+
+    public virtual BusinessLineLevelValueQueueConfig BusinessLineLevelValueQueueConf { get; set; } = null!;
 
     public virtual ICollection<GeneratedQueue> GeneratedQueues { get; set; } = new List<GeneratedQueue>();
-
-    public virtual Processor? Process { get; set; }
 }

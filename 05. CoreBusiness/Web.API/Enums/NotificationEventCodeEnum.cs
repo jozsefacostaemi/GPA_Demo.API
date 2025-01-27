@@ -2,10 +2,11 @@
 {
     public enum NotificationEventCodeEnum
     {
-        EmmitAttention, 
+        EmmitAttention,
         AssignedAttention,
         InProcessAttention,
         FinishAttention,
-        CancelAttention
+        CancelAttention,
+        RefreshMonitoring
     }
 }

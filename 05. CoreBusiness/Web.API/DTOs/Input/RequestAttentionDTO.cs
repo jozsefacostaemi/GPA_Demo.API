@@ -1,4 +1,4 @@
-﻿namespace Web.Core.Business.API.DTOs
+﻿namespace Web.Core.Business.API.DTOs.Input
 {
     public class RequestAttentionDTO
     {

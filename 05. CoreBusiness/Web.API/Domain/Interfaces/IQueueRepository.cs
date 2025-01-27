@@ -1,4 +1,6 @@
-﻿namespace Web.Core.Business.API.Domain.Interfaces
+﻿using Web.Core.Business.API.DTOs.Input;
+
+namespace Web.Core.Business.API.Domain.Interfaces
 {
     public interface IQueueRepository
     {

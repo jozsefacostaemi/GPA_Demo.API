@@ -6,6 +6,8 @@ using Notification.Lib;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitoring;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notifications;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMachine;
@@ -17,10 +19,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAllOrigins", builder =>
-        builder.WithOrigins("http://localhost:4200") // Permitir solo desde localhost:4200
-               .AllowAnyMethod()   // Permitir cualquier método (GET, POST, PUT, DELETE, etc.)
-               .AllowAnyHeader()); // Permitir cualquier encabezado
+    options.AddPolicy("AllowAllOrigins",
+        builder => builder
+            .WithOrigins("http://localhost:4200") 
+            .AllowCredentials()  
+            .AllowAnyHeader()
+            .AllowAnyMethod());
 });
 
 builder.Services.AddSignalR();
@@ -51,12 +55,14 @@ builder.Services.AddScoped<IAttentionRepository, AttentionRepository>();
 builder.Services.AddScoped<IGenericStatesRepository, GenericStatesRepository>();
 builder.Services.AddScoped<IHealthCareStaffRepository, HealthCareStaffRepository>();
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<NotificationRepository>();
-
+builder.Services.AddScoped<IMonitoringRepository, MonitoringRepository>();
+builder.Services.AddScoped<EventHub>();
 #endregion
 
 var app = builder.Build();
-app.UseCors("AllowAllOrigins"); // Habilitar CORS para todos los orígenes permitidos
+app.UseCors("AllowAllOrigins"); 
 app.UseRouting();
 app.UseAuthorization();
 app.UseSwagger();
@@ -69,7 +75,7 @@ app.UseSwaggerUI(options =>
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
-    endpoints.MapHub<EventHub>("/eventHub"); 
+    endpoints.MapHub<EventHub>("/eventHub");
 });
 
 

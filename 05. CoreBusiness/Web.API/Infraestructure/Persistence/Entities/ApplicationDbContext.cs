@@ -21,6 +21,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<AttentionState> AttentionStates { get; set; }
 
+    public virtual DbSet<BusinessLine> BusinessLines { get; set; }
+
+    public virtual DbSet<BusinessLineLevelValueQueueConfig> BusinessLineLevelValueQueueConfigs { get; set; }
+
     public virtual DbSet<City> Cities { get; set; }
 
     public virtual DbSet<ConfQueue> ConfQueues { get; set; }
@@ -33,6 +37,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<HealthCareStaff> HealthCareStaffs { get; set; }
 
+    public virtual DbSet<LevelQueue> LevelQueues { get; set; }
+
+    public virtual DbSet<Menu> Menus { get; set; }
+
     public virtual DbSet<Patient> Patients { get; set; }
 
     public virtual DbSet<PersonState> PersonStates { get; set; }
@@ -40,6 +48,10 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Plan> Plans { get; set; }
 
     public virtual DbSet<Processor> Processors { get; set; }
+
+    public virtual DbSet<Rol> Rols { get; set; }
+
+    public virtual DbSet<UserMenu> UserMenus { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -52,6 +64,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Id)
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
             entity.Property(e => e.EndDate).HasColumnType("datetime");
             entity.Property(e => e.StartDate).HasColumnType("datetime");
 
@@ -59,6 +72,11 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.AttentionStateId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attentions_AttentionStates");
+
+            entity.HasOne(d => d.BusinessLineLevelValueQueueConfig).WithMany(p => p.Attentions)
+                .HasForeignKey(d => d.BusinessLineLevelValueQueueConfigId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Attentions_BusinessLineLevelValueQueueConfig");
 
             entity.HasOne(d => d.HealthCareStaff).WithMany(p => p.Attentions)
                 .HasForeignKey(d => d.HealthCareStaffId)
@@ -91,6 +109,11 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.AttentionStateNavigation).WithMany(p => p.AttentionHistories)
                 .HasForeignKey(d => d.AttentionState)
                 .HasConstraintName("FK_AttentionHistories_AttentionStates");
+
+            entity.HasOne(d => d.GeneratedQueue).WithMany(p => p.AttentionHistories)
+                .HasForeignKey(d => d.GeneratedQueueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AttentionHistories_GeneratedQueues");
         });
 
         modelBuilder.Entity<AttentionState>(entity =>
@@ -101,7 +124,57 @@ public partial class ApplicationDbContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
             entity.Property(e => e.Code).HasMaxLength(10);
+            entity.Property(e => e.Color).HasMaxLength(20);
             entity.Property(e => e.Name).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<BusinessLine>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_BussinessLines");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasMaxLength(10);
+            entity.Property(e => e.Name).HasMaxLength(50);
+
+            entity.HasOne(d => d.LevelQueue).WithMany(p => p.BusinessLines)
+                .HasForeignKey(d => d.LevelQueueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BusinessLines_LevelQueues");
+        });
+
+        modelBuilder.Entity<BusinessLineLevelValueQueueConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_LevelValue");
+
+            entity.ToTable("BusinessLineLevelValueQueueConfig");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+
+            entity.HasOne(d => d.BusinessLine).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.BusinessLineId)
+                .HasConstraintName("FK_LevelValueQueues_BusinessLines");
+
+            entity.HasOne(d => d.City).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.CityId)
+                .HasConstraintName("FK_LevelValue_Cities");
+
+            entity.HasOne(d => d.Country).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.CountryId)
+                .HasConstraintName("FK_LevelValue_Countries");
+
+            entity.HasOne(d => d.Department).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.DepartmentId)
+                .HasConstraintName("FK_LevelValueQueues_Departments");
+
+            entity.HasOne(d => d.LevelQueue).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.LevelQueueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LevelValue_Levels1");
+
+            entity.HasOne(d => d.Process).WithMany(p => p.BusinessLineLevelValueQueueConfigs)
+                .HasForeignKey(d => d.ProcessId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LevelValue_Processor");
         });
 
         modelBuilder.Entity<City>(entity =>
@@ -114,6 +187,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasOne(d => d.Department).WithMany(p => p.Cities)
                 .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Cities_Departments");
         });
 
@@ -130,15 +204,13 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasOne(d => d.AttentionState).WithMany(p => p.ConfQueues)
                 .HasForeignKey(d => d.AttentionStateId)
-                .HasConstraintName("FK_ConfQueues_States");
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConfQueues_AttentionStates");
 
-            entity.HasOne(d => d.City).WithMany(p => p.ConfQueues)
-                .HasForeignKey(d => d.CityId)
-                .HasConstraintName("FK_ConfQueues_Cities");
-
-            entity.HasOne(d => d.Process).WithMany(p => p.ConfQueues)
-                .HasForeignKey(d => d.ProcessId)
-                .HasConstraintName("FK_ConfQueues_Processor");
+            entity.HasOne(d => d.BusinessLineLevelValueQueueConf).WithMany(p => p.ConfQueues)
+                .HasForeignKey(d => d.BusinessLineLevelValueQueueConfId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConfQueues_BusinessLineLevelValueQueueConfig");
         });
 
         modelBuilder.Entity<Country>(entity =>
@@ -167,6 +239,7 @@ public partial class ApplicationDbContext : DbContext
 
             entity.HasOne(d => d.Country).WithMany(p => p.Departments)
                 .HasForeignKey(d => d.CountryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Departments_Country");
         });
 
@@ -188,8 +261,17 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Id)
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
+            entity.Property(e => e.AvailableAt).HasColumnType("datetime");
             entity.Property(e => e.CityId).HasColumnName("CityID");
+            entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Password).HasMaxLength(100);
+            entity.Property(e => e.UserName).HasMaxLength(100);
+
+            entity.HasOne(d => d.BusinessLine).WithMany(p => p.HealthCareStaffs)
+                .HasForeignKey(d => d.BusinessLineId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_HealthCareStaffs_BussinessLines");
 
             entity.HasOne(d => d.City).WithMany(p => p.HealthCareStaffs)
                 .HasForeignKey(d => d.CityId)
@@ -206,6 +288,27 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_HealthCareStaffs_Processor");
         });
 
+        modelBuilder.Entity<LevelQueue>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Levels");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasMaxLength(10);
+            entity.Property(e => e.Name).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<Menu>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Menuss");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Active)
+                .HasMaxLength(10)
+                .IsFixedLength();
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(50);
+        });
+
         modelBuilder.Entity<Patient>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_Patientss");
@@ -217,8 +320,14 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Identification).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(50);
 
+            entity.HasOne(d => d.BusinessLine).WithMany(p => p.Patients)
+                .HasForeignKey(d => d.BusinessLineId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Patients_BussinessLines");
+
             entity.HasOne(d => d.City).WithMany(p => p.Patients)
                 .HasForeignKey(d => d.CityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Patients_Cities");
 
             entity.HasOne(d => d.PersonState).WithMany(p => p.Patients)
@@ -263,6 +372,20 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnName("ID");
             entity.Property(e => e.Code).HasMaxLength(10);
             entity.Property(e => e.Name).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<Rol>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<UserMenu>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Active).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(50);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -15,7 +15,7 @@ public partial class Processor
 
     public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
 
-    public virtual ICollection<ConfQueue> ConfQueues { get; set; } = new List<ConfQueue>();
+    public virtual ICollection<BusinessLineLevelValueQueueConfig> BusinessLineLevelValueQueueConfigs { get; set; } = new List<BusinessLineLevelValueQueueConfig>();
 
     public virtual ICollection<HealthCareStaff> HealthCareStaffs { get; set; } = new List<HealthCareStaff>();
 }

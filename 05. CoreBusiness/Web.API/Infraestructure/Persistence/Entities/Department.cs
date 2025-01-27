@@ -13,9 +13,11 @@ public partial class Department
 
     public string Active { get; set; } = null!;
 
-    public Guid? CountryId { get; set; }
+    public Guid CountryId { get; set; }
+
+    public virtual ICollection<BusinessLineLevelValueQueueConfig> BusinessLineLevelValueQueueConfigs { get; set; } = new List<BusinessLineLevelValueQueueConfig>();
 
     public virtual ICollection<City> Cities { get; set; } = new List<City>();
 
-    public virtual Country? Country { get; set; }
+    public virtual Country Country { get; set; } = null!;
 }

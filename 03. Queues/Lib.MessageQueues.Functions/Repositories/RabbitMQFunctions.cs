@@ -50,20 +50,34 @@ namespace Lib.MessageQueues.Functions.Repositories
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
             var queues = JArray.Parse(jsonResponse);
+
+            var deleteTasks = new List<Task>();
+
             foreach (var queue in queues)
             {
                 string queueName = queue["name"].ToString();
-                Console.WriteLine($"Eliminando cola: {queueName}");
-                var deleteResponse = await client.DeleteAsync($"queues/%2F/{queueName}");
-                deleteResponse.EnsureSuccessStatusCode();
+                Console.WriteLine($"Agregando cola para eliminar: {queueName}");
 
-                Console.WriteLine($"Cola {queueName} eliminada exitosamente.");
+                deleteTasks.Add(DeleteQueueAsync(client, queueName));
             }
+
+            await Task.WhenAll(deleteTasks);
+
+            Console.WriteLine("Todas las colas han sido eliminadas.");
+        }
+
+        private async Task DeleteQueueAsync(HttpClient client, string queueName)
+        {
+            var deleteResponse = await client.DeleteAsync($"queues/%2F/{queueName}");
+            deleteResponse.EnsureSuccessStatusCode();
+
+            Console.WriteLine($"Cola {queueName} eliminada exitosamente.");
         }
         /* Función que emite un mensaje pendiente */
         public async Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, Guid cityId, Guid processId, byte priority)
         {
             var properties = channel.CreateBasicProperties();
+            properties.Persistent = true; 
             properties.Priority = priority;
             channel.BasicPublish(exchange: "",
                                  routingKey: queueName,
@@ -77,16 +91,17 @@ namespace Lib.MessageQueues.Functions.Repositories
             var result = channel.BasicGet(queue: queueNamePend, autoAck: false);
             if (result != null)
             {
-                //Confirmarmos la lectura del mensaje
                 channel.BasicAck(deliveryTag: result.DeliveryTag, multiple: false);
 
                 messageInfo = BuildMessageAsign(result, HealthCareStaffId.ToString());
                 messageInfo.HealthCareStaffId = HealthCareStaffId.ToString();
-                //Enviamos mensaje a cola de Asignado
+
+                var properties = channel.CreateBasicProperties();
+                properties.Persistent = true;  // Asegura que el mensaje sea persistente.
                 channel.BasicPublish(
                     exchange: "",
                     routingKey: queueNameAsign,
-                    basicProperties: null,
+                    basicProperties: properties,
                     body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(messageInfo)));
 
                 return messageInfo.Id;
@@ -94,7 +109,7 @@ namespace Lib.MessageQueues.Functions.Repositories
             return string.Empty;
         }
         /* Función que emite un mensaje generico (En proceso, Finalizado, Cancelado) */
-        public async Task EmitGenericMessage(Guid messageId, string queueNameOrigin, string queueNameTarget) => await MoveMessageQueue(messageId, queueNameOrigin, queueNameTarget);
+        public async Task<bool> EmitGenericMessage(Guid messageId, string queueNameOrigin, string queueNameTarget) => await MoveMessageQueue(messageId, queueNameOrigin, queueNameTarget);
         #endregion
 
         #region Private Methods
@@ -167,7 +182,7 @@ namespace Lib.MessageQueues.Functions.Repositories
             }
         }
         /* Función que mueve el mensaje de una cola a otra */
-        private async Task MoveMessageQueue(Guid Id, string OriginNameQueue, string TargetNameQueue)
+        private async Task<bool> MoveMessageQueue(Guid Id, string OriginNameQueue, string TargetNameQueue)
         {
             OpenChannel();
             var queueDeclareResult = channel.QueueDeclarePassive(OriginNameQueue);
@@ -195,9 +210,13 @@ namespace Lib.MessageQueues.Functions.Repositories
                 Thread.Sleep(500);
 
             if (!foundMessage)
+            {
                 Console.WriteLine("No se encontró el mensaje después de revisar todos los mensajes en la cola.");
+                return false;
+            }
 
             CloseChannel();
+            return true;
         }
         #endregion
     }

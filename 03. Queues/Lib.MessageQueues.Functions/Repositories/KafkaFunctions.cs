@@ -89,12 +89,10 @@ namespace Lib.MessageQueues.Functions.Repositories
                 Console.WriteLine($"Error al emitir mensaje: {e.Error.Reason}");
             }
         }
-
-
-
-        public async Task EmitGenericMessage(Guid messageId, string topicNameOrigin, string topicNameTarget)
+        public async Task<bool> EmitGenericMessage(Guid messageId, string topicNameOrigin, string topicNameTarget)
         {
             await MoveMessageQueue(messageId, topicNameOrigin, topicNameTarget);
+            return true;
         }
         public async Task<string> EmitMessageAsign(string queueNameAsign, string queueNamePend, Guid HealthCareStaffId)
         {

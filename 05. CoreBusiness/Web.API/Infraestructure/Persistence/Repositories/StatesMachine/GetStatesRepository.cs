@@ -23,13 +23,13 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                 case StateEventProcessEnum.CREATION:
 
                     var creationAttentionState = await GetAttentionState(AttentionStateEnum.PEND);
-                    return new StatesMachineResponse { patientStateId = await GetPersonState(PersonStateEnum.ESPASIGPA), attentionStateActualId = creationAttentionState };
+                    return new StatesMachineResponse { patientStateId = await GetPersonState(PersonStateEnum.ESPASIGPA), attentionStateTargetId = creationAttentionState };
 
                 case StateEventProcessEnum.ASIGNATION:
                     var assignedPersonState = await GetPersonState(PersonStateEnum.ASIG);
                     var assignedAttentionState = await GetAttentionState(AttentionStateEnum.ASIG);
                     var pendingAttentionState = await GetAttentionState(AttentionStateEnum.PEND);
-                    return new StatesMachineResponse { patientStateId = assignedPersonState, healthCareStaffStateId = assignedPersonState, attentionStateActualId = assignedAttentionState, attentionStatePreviousId = pendingAttentionState };
+                    return new StatesMachineResponse { patientStateId = assignedPersonState, healthCareStaffStateId = assignedPersonState, attentionStateTargetId = assignedAttentionState, attentionStateActualId = pendingAttentionState };
 
               
                 //TODO
@@ -37,7 +37,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                     var inProcessPersonState = await GetPersonState(PersonStateEnum.ENPRO);
                     var inProcessAttentionState = await GetAttentionState(AttentionStateEnum.ENPRO);
                     var assignedAttentionStatee = await GetAttentionState(AttentionStateEnum.ASIG);
-                    return new StatesMachineResponse { patientStateId = inProcessPersonState, healthCareStaffStateId = inProcessPersonState, attentionStateActualId = inProcessAttentionState, attentionStatePreviousId = assignedAttentionStatee };
+                    return new StatesMachineResponse { patientStateId = inProcessPersonState, healthCareStaffStateId = inProcessPersonState, attentionStateTargetId = inProcessAttentionState, attentionStateActualId = assignedAttentionStatee };
 
                 case StateEventProcessEnum.ENDING:
 
@@ -45,14 +45,14 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                     var endingHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var endingAttentionState = await GetAttentionState(AttentionStateEnum.FINA);
                     var inProcessPreviousAttentionState = await GetAttentionState(AttentionStateEnum.ENPRO);
-                    return new StatesMachineResponse { patientStateId = endingPatientState, healthCareStaffStateId = endingHealthCareScaffState, attentionStateActualId = endingAttentionState, attentionStatePreviousId = inProcessPreviousAttentionState };
+                    return new StatesMachineResponse { patientStateId = endingPatientState, healthCareStaffStateId = endingHealthCareScaffState, attentionStateTargetId = endingAttentionState, attentionStateActualId = inProcessPreviousAttentionState };
 
                 case StateEventProcessEnum.CANCELLATION:
 
                     var cancelPatientState = await GetPersonState(PersonStateEnum.CANC);
                     var cancelHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var cancelAttentionState = await GetAttentionState(AttentionStateEnum.CANC);
-                    return new StatesMachineResponse { patientStateId = cancelPatientState, healthCareStaffStateId = cancelHealthCareScaffState, attentionStateActualId = cancelAttentionState };
+                    return new StatesMachineResponse { patientStateId = cancelPatientState, healthCareStaffStateId = cancelHealthCareScaffState, attentionStateTargetId = cancelAttentionState };
                 default:
                     break;
             }

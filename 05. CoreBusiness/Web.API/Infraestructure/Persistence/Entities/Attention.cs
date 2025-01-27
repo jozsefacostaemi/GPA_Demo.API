@@ -13,7 +13,7 @@ public partial class Attention
 
     public Guid? HealthCareStaffId { get; set; }
 
-    public DateTime StartDate { get; set; }
+    public DateTime? StartDate { get; set; }
 
     public DateTime? EndDate { get; set; }
 
@@ -27,9 +27,15 @@ public partial class Attention
 
     public int Priority { get; set; }
 
+    public DateTime? CreatedAt { get; set; }
+
+    public Guid BusinessLineLevelValueQueueConfigId { get; set; }
+
     public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
 
     public virtual AttentionState AttentionState { get; set; } = null!;
+
+    public virtual BusinessLineLevelValueQueueConfig BusinessLineLevelValueQueueConfig { get; set; } = null!;
 
     public virtual HealthCareStaff? HealthCareStaff { get; set; }
 

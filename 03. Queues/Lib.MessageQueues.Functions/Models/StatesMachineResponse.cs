@@ -8,8 +8,8 @@ namespace Lib.MessageQueues.Functions.Models
 {
     public class StatesMachineResponse
     {
+        public Guid? attentionStateTargetId { get; set; }
         public Guid? attentionStateActualId { get; set; }
-        public Guid? attentionStatePreviousId { get; set; }
         public Guid? patientStateId { get; set; }
         public Guid? healthCareStaffStateId { get; set; }
     }

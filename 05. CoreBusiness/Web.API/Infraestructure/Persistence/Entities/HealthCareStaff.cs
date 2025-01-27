@@ -17,7 +17,23 @@ public partial class HealthCareStaff
 
     public bool Active { get; set; }
 
+    public string UserName { get; set; } = null!;
+
+    public string Password { get; set; } = null!;
+
+    public Guid Rol { get; set; }
+
+    public string Email { get; set; } = null!;
+
+    public Guid BusinessLineId { get; set; }
+
+    public DateTime? AvailableAt { get; set; }
+
+    public bool Loggued { get; set; }
+
     public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
+
+    public virtual BusinessLine BusinessLine { get; set; } = null!;
 
     public virtual City City { get; set; } = null!;
 

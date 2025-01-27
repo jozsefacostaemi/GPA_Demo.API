@@ -10,13 +10,15 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
         #region Variables
         private readonly ApplicationDbContext _context;
         private readonly IRabbitMQFunctions _rabbitMQFunctions;
+        private readonly IAttentionRepository _iattentionRepository;
         #endregion
 
         #region Ctor
-        public QueueRepository(ApplicationDbContext applicationDbContext, IRabbitMQFunctions rabbitMQFunctions)
+        public QueueRepository(ApplicationDbContext applicationDbContext, IRabbitMQFunctions rabbitMQFunctions, IAttentionRepository iattentionRepository)
         {
             _context = applicationDbContext;
             _rabbitMQFunctions = rabbitMQFunctions;
+            _iattentionRepository = iattentionRepository;
         }
         #endregion
 
@@ -24,28 +26,43 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
         /* Función que genera la configuración de las colas con base a su parametrización */
         public async Task<bool> GeneratedConfigQueues()
         {
-            var resultConfig = _context.ConfQueues.Where(x => x.Active == true).Select(x => new
+            Guid BusinessLineId = Guid.Parse("DD44C571-4FA5-4133-AECD-062834C93601");
+            var businessLine = await _context.BusinessLines.Where(x => x.Active == true && x.Id.Equals(BusinessLineId)).Select(x => new { x.LevelQueueId, x.Code }).SingleOrDefaultAsync();
+            if (businessLine != null)
             {
-                CityName = x.City.Name,
-                ProcessName = x.Process.Name,
-                StateName = x.AttentionState.Name,
-                x.NOrder,
-                ConfQueueId = x.Id,
-            }).ToList();
-            var resultGeneratedQueues = await _context.GeneratedQueues.Where(x => x.Active == true).Select(x => x.ConfigQueueId).ToListAsync();
-
-            if (resultConfig.Any())
-            {
-                foreach (var drResultConfig in resultConfig)
+                await _iattentionRepository.ResetAttentionsAndPersonStatus();
+                await deleteQueueGenerated();
+                var getCodesForBusinessLine = await _context.BusinessLineLevelValueQueueConfigs
+                     .Where(x => x.LevelQueueId.Equals(businessLine.LevelQueueId)).Select(x => x.Id).ToListAsync();
+                if (getCodesForBusinessLine.Any())
                 {
-                    if (!resultGeneratedQueues.Contains(drResultConfig.ConfQueueId))
+                    var resultConfig = _context.ConfQueues.Where(x => x.Active == true && getCodesForBusinessLine.Contains(x.BusinessLineLevelValueQueueConf.Id)).Select(x => new
                     {
-                        var generatedQueue = GeneratedNameQueue(drResultConfig.CityName?.Trim(), drResultConfig?.ProcessName.Trim(), drResultConfig?.StateName.Trim(), (int)drResultConfig.NOrder);
-                        if (!string.IsNullOrEmpty(generatedQueue))
-                            await _context.AddAsync(new GeneratedQueue { Id = Guid.NewGuid(), Name = generatedQueue, Active = true, ConfigQueueId = drResultConfig.ConfQueueId });
+                        PreNameQueue =
+                        x.BusinessLineLevelValueQueueConf.CountryId != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.Country.Name}" :
+                        x.BusinessLineLevelValueQueueConf.Department != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.Department.Name}" :
+                        x.BusinessLineLevelValueQueueConf.CityId != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.City.Name}" : $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}",
+                        StateName = x.AttentionState.Name,
+                        x.NOrder,
+                        ConfQueueId = x.Id,
+                    }).ToList();
+                    var resultGeneratedQueues = await _context.GeneratedQueues.Where(x => x.Active == true).Select(x => x.ConfigQueueId).ToListAsync();
+                    if (resultConfig.Any())
+                    {
+                        foreach (var drResultConfig in resultConfig)
+                        {
+                            if (!resultGeneratedQueues.Contains(drResultConfig.ConfQueueId))
+                            {
+                                var generatedQueue = GeneratedNameQueue(drResultConfig.PreNameQueue?.Trim(), drResultConfig?.StateName.Trim(), (int)drResultConfig.NOrder);
+                                if (!string.IsNullOrEmpty(generatedQueue))
+                                    await _context.AddAsync(new GeneratedQueue { Id = Guid.NewGuid(), Name = generatedQueue, Active = true, ConfigQueueId = drResultConfig.ConfQueueId });
+                            }
+                        }
+                        await _context.SaveChangesAsync();
                     }
                 }
-                await _context.SaveChangesAsync();
+                await DeleteQueues();
+                await CreatedQueues();
             }
             return true;
         }
@@ -63,7 +80,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
                     dr.ConfigQueue.MessageLifeTime,
                     dr.ConfigQueue.QueueExpireTime,
                     dr.ConfigQueue.QueueMode,
-                    dr.ConfigQueue.QueueDeadLetterExchange, 
+                    dr.ConfigQueue.QueueDeadLetterExchange,
                     dr.ConfigQueue.QueueDeadLetterExchangeRoutingKey);
             }
             return true;
@@ -78,15 +95,18 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
 
         #region Private Methods
         /* Función que genera el nombre de la cola */
-        private string GeneratedNameQueue(string city, string process, string state, int order)
+        private string GeneratedNameQueue(string prename, string state, int order)
         {
-            if (!string.IsNullOrEmpty(city) && !string.IsNullOrEmpty(process) && !string.IsNullOrEmpty(state))
-                return $"{order}.{city}.{process}.{state}";
-            if (!string.IsNullOrEmpty(process) && !string.IsNullOrEmpty(state))
-                return $"{order}.{process}.{state}";
-            if (!string.IsNullOrEmpty(state))
-                return $"{order}.{process}.{state}";
+            if (!string.IsNullOrEmpty(prename) && !string.IsNullOrEmpty(state))
+                return $"{order}.{prename}.{state}";
             return string.Empty;
+        }
+        /* Función que elimina todas las colas generadas */
+        private async Task deleteQueueGenerated()
+        {
+            var deleteQueues = await _context.GeneratedQueues.ToListAsync();
+            _context.GeneratedQueues.RemoveRange(deleteQueues);
+            await _context.SaveChangesAsync();
         }
         #endregion
     }

@@ -75,7 +75,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             Guid? getStatusAvailable = await _context.PersonStates.Where(x => x.Code.Equals(PersonStateEnum.DISP.ToString())).Select(x => x.Id).FirstOrDefaultAsync();
             if (getStatusAvailable != null && getStatusAvailable != Guid.Empty)
             {
-                await _context.HealthCareStaffs.ExecuteUpdateAsync(x => x.SetProperty(p => p.PersonStateId, getStatusAvailable));
+                await _context.HealthCareStaffs.ExecuteUpdateAsync(x => x.SetProperty(p => p.PersonStateId, getStatusAvailable).SetProperty(x=>x.Loggued, false).SetProperty(p => p.AvailableAt, null as DateTime?));
                 await _context.Patients.ExecuteUpdateAsync(x => x.SetProperty(p => p.PersonStateId, getStatusAvailable));
             }
         }

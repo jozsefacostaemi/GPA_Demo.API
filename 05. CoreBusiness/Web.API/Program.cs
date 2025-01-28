@@ -17,17 +17,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
         builder => builder
-            .WithOrigins("http://localhost:4200") 
+            .WithOrigins("http://localhost:4200", "http://localhost:52528") 
             .AllowCredentials()  
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
 
-builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 
@@ -58,7 +58,6 @@ builder.Services.AddScoped<IPatientRepository, PatientRepository>();
 builder.Services.AddScoped<ILoginRepository, LoginRepository>();
 builder.Services.AddScoped<NotificationRepository>();
 builder.Services.AddScoped<IMonitoringRepository, MonitoringRepository>();
-builder.Services.AddScoped<EventHub>();
 #endregion
 
 var app = builder.Build();
@@ -72,11 +71,7 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapHub<EventHub>("/eventHub");
-});
-
+app.MapControllers();
+app.MapHub<EventHub>("/eventhub");
 
 app.Run();

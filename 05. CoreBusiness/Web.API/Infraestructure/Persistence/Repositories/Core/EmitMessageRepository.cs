@@ -58,7 +58,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await InsertHistoryAttention(attentionId, (Guid)machineStates.attentionStateTargetId, (Guid)getNameQueueGenerated.Item2);
             await _messagingFunctions.EmitMessagePending(getNameQueueGenerated.Item1, attentionId, patientId, (Guid)patient.CityId, process.Id, (byte)priority);
             await UpdateMachineStates(attentionId, (Guid)machineStates.attentionStateTargetId, null, null, (Guid)machineStates.patientStateId);
-            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.RefreshMonitoring);
             var resultAttention = await GetAttentionsById(attentionId);
 
             /* Si hay médico disponible, asignamos la cita automaticamente */
@@ -66,6 +65,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (getHealCareStaffAvailable != null && getHealCareStaffAvailable.Data != null)
                 return await AssignAttention((Guid)getHealCareStaffAvailable.Data);
 
+            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.EmmitAttention, resultAttention);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: resultAttention);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
@@ -85,8 +85,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (string.IsNullOrEmpty(resultEmitMessageAttention)) return RequestResult.ErrorResult($"No se encontró información para la cola de asignación");
             await InsertHistoryAttention(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateTargetId, (Guid)getNameQueueAsignedGenerated.Item2);
             await UpdateMachineStates(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateTargetId, HealthCareStaffId, (Guid)machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId);
-            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.RefreshMonitoring);
             var resultAttention = await GetAttentionsById(Guid.Parse(resultEmitMessageAttention));
+            await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.EmmitAttention, resultAttention);
             return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: resultAttention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */

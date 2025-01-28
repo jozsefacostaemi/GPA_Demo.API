@@ -16,10 +16,10 @@ namespace Web.Core.Business.API.Controllers
         }
        
         [HttpPost("LogIn")]
-        public async Task<RequestResult> LogIn(RequestLoginDTO loginDto) => await _ILoginRepository.LogIn(loginDto.UserName, loginDto.Password);
+        public async Task<RequestResult> LogIn([FromBody] RequestLoginDTO loginDto) => await _ILoginRepository.LogIn(loginDto.UserName, loginDto.Password);
 
         [HttpPost("LogOut")]
-        public async Task<RequestResult> LogOut(RequestHealthCareStaffDTO logout) => await _ILoginRepository.LogOut(logout.HealthCareStaffId);
+        public async Task<RequestResult> LogOut([FromBody]  RequestHealthCareStaffDTO logout) => await _ILoginRepository.LogOut(logout.HealthCareStaffId);
 
 
     }

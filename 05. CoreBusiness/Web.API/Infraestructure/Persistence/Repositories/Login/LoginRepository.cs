@@ -3,15 +3,22 @@ using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
 {
     public class LoginRepository : ILoginRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmitMessagesRepository _IEmitMessagesRepository;
+        private readonly IHealthCareStaffRepository _IHealthCareStaffRepository;
         private readonly List<string> LstStatesCanNotLoggued = new List<string> { PersonStateEnum.ASIG.ToString(), PersonStateEnum.ENPRO.ToString() };
-        public LoginRepository(ApplicationDbContext context) => _context = context;
-
+        public LoginRepository(ApplicationDbContext context, IEmitMessagesRepository IEmitMessagesRepository, IHealthCareStaffRepository IHealthCareStaffRepository)
+        {
+            _context = context;
+            _IEmitMessagesRepository = IEmitMessagesRepository;
+            _IHealthCareStaffRepository = IHealthCareStaffRepository;
+        }
         /* Función que valida las credenciales del personal asistencial */
         public async Task<RequestResult> LogIn(string userName, string password)
         {
@@ -26,8 +33,10 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
                 gethealthCareStaff.AvailableAt = DateTime.Now;
                 await _context.SaveChangesAsync();
             }
-
-
+            /* Si hay médico disponible, asignamos la cita automaticamente */
+            var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
+            if (getHealCareStaffAvailable?.Data != null)
+                await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
             return RequestResult.SuccessResult(message: "Login Exitoso", data: healthCareStaff);
         }
         /* Función que cierre la sesión del personal asistencial */
@@ -43,5 +52,5 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
             await _context.SaveChangesAsync();
             return RequestResult.SuccessResult(message: "LogOut Exitoso", data: healthCareStaffId);
         }
-}
+    }
 }

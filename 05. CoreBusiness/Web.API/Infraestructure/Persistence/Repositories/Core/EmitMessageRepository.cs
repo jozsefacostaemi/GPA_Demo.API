@@ -77,8 +77,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (machineStates == null) return RequestResult.ErrorResult($"No existe información para el proceso {StateEventProcessEnum.ASIGNATION}");
             var HealthCareStaff = await GetHealthCareStaffById(HealthCareStaffId);
             if (HealthCareStaff == null) return RequestResult.ErrorResult($"No existe información para el personal asistencial: {HealthCareStaffId}");
-            (string, Guid?, Guid?) getNameQueueAsignedGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateTargetId);
-            (string, Guid?, Guid?) getNameQueuePendingGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateActualId);
+            (string, Guid?, Guid?) getNameQueueAsignedGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateActualId);
+            (string, Guid?, Guid?) getNameQueuePendingGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateTargetId);
             if (string.IsNullOrEmpty(getNameQueueAsignedGenerated.Item1) || string.IsNullOrEmpty(getNameQueuePendingGenerated.Item1)) return RequestResult.ErrorResult($"No existen colas configuradas para el proceso, ciudad e información para el evento de proceso {StateEventProcessEnum.ASIGNATION}");
             string resultEmitMessageAttention = await _messagingFunctions.EmitMessageAsign(getNameQueueAsignedGenerated.Item1, getNameQueuePendingGenerated.Item1, HealthCareStaffId);
             if (string.IsNullOrEmpty(resultEmitMessageAttention)) return RequestResult.ErrorResult($"No se encontró información para la cola de asignación");
@@ -150,7 +150,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     Patient = x.Patient != null ? x.Patient.Name : "N/A",
                     Process = x.Process != null ? x.Process.Name : string.Empty,
                     City = x.Patient != null && x.Patient.City != null ? x.Patient.City.Name : string.Empty,
-                    Comorbities = x.Patient != null && x.Patient.Comorbidities != null ? (int)x.Patient.Comorbidities : 0,
+                    PatientNum = x.Patient != null ? x.Patient.Identification : string.Empty,
+                    Comorbidities = x.Patient != null ? x.Patient.Comorbidities : 0,
                     Age = x.Patient != null && x.Patient.Birthday != null ? CalculatedAge.YearsMonthsDays(Convert.ToDateTime(x.Patient.Birthday)) : string.Empty,
                     State = x.AttentionState != null ? x.AttentionState.Name : string.Empty,
                     Plan = x.Patient != null && x.Patient.Plan != null ? x.Patient.Plan.Name : "N/A",

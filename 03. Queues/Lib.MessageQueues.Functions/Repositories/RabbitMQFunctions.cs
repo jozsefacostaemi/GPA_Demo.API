@@ -199,7 +199,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                 var mensajeJson = Encoding.UTF8.GetString(ea.Body.ToArray());
                 dynamic objMessage = JsonConvert.DeserializeObject(mensajeJson);
 
-                if (objMessage.Id == Id)
+                if (objMessage != null && objMessage.Id == Id)
                 {
                     channel.BasicPublish(exchange: "", routingKey: TargetNameQueue, basicProperties: null, body: ea.Body);
                     channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);

@@ -18,17 +18,20 @@ namespace Web.Core.Business.API.Controllers
 
         [HttpGet("GetQuantityByState")]
         public async Task<RequestResult> GetAttentions(Guid? BusinessLine) => await _IMonitoringRepository.GetQuantityByState(BusinessLine);
-        
+
         [HttpGet("GetStadisticsByHealthCareStaff")]
-        public async Task<RequestResult> GetStadisticsByHealthCareStaff(Guid? BusinessLine) => await _IMonitoringRepository.GetStadisticsByHealthCareStaff(BusinessLine);
-        
+        public async Task<RequestResult> GetStadisticsByHealthCareStaff(Guid? BusinessLine) => await _IMonitoringRepository.GetAttentionsFinishByHealthCareStaff(BusinessLine);
+
         [HttpGet("GetLogguedByHealthCareStaff")]
         public async Task<RequestResult> GetLogguedByHealthCareStaff(Guid? BusinessLine) => await _IMonitoringRepository.GetLogguedHealthCareStaff(BusinessLine);
 
         [HttpGet("GetAttentionsByTimeLine")]
         public async Task<RequestResult> GetAttentionsByTimeLine(Guid? BusinessLine) => await _IMonitoringRepository.GetAttentionsByTimeLine(BusinessLine);
 
-        
+        [HttpGet("GetPercentAttentionsFinish")]
+        public async Task<RequestResult> GetPercentAttentionsFinish(Guid? BusinessLine) => await _IMonitoringRepository.GetPercentAttentionsFinish(BusinessLine);
 
+        [HttpGet("GetNumberAttentionsByCity")]
+        public async Task<RequestResult> GetNumberAttentionsByCity(Guid? BusinessLine) => await _IMonitoringRepository.GetNumberAttentionsByCity(BusinessLine);
     }
 }

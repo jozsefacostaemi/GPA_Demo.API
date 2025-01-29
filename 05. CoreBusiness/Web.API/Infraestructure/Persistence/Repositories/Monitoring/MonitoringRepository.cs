@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
+using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitoring
@@ -45,23 +46,47 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
             return RequestResult.SuccessResult(cpuUsage);
         }
         /* Función que consulta la información de doctores agrupados por atenciones */
-        public async Task<RequestResult> GetStadisticsByHealthCareStaff(Guid? BusinessLineId)
+        public async Task<RequestResult> GetAttentionsFinishByHealthCareStaff(Guid? BusinessLineId)
         {
-            //var getHeadCareStaff = await _context.he
-            return RequestResult.SuccessResult();
+            var attentionsFinishByHealthCareStaff = await _context.Attentions
+                .Where(x => x.HealthCareStaff != null && !string.IsNullOrEmpty(x.AttentionState.Code) && x.AttentionState.Code.Equals(AttentionStateEnum.FINA.ToString()))
+                .GroupBy(x => new { x.HealthCareStaffId, x.HealthCareStaff.Name })
+                .Select(x => new
+                {
+                    HealthCareStaffName = x.Key.Name,
+                    Count = x.Count()
+                }).ToListAsync();
+
+            var formattedResult = attentionsFinishByHealthCareStaff.Select(x => new
+            {
+                HealthCareStaff = x.HealthCareStaffName,
+                x.Count
+            }).ToList();
+
+            return RequestResult.SuccessResult(formattedResult);
         }
         /* Función que consulta la información de doctores logueados por atenciones */
         public async Task<RequestResult> GetLogguedHealthCareStaff(Guid? BusinessLineId)
         {
-            return RequestResult.SuccessResult();
+            var groupedUsers = await _context.HealthCareStaffs
+                .GroupBy(u => u.Loggued)
+                .Select(g => new
+                {
+                    Logged = g.Key,
+                    Users = g.ToList()
+                })
+                .ToListAsync();
+            var loggedUsers = groupedUsers.FirstOrDefault(g => g.Logged == true)?.Users;
+            var notLoggedUsers = groupedUsers.FirstOrDefault(g => g.Logged == false)?.Users;
+            return RequestResult.SuccessResult(data: new { loggedUsers, notLoggedUsers });
         }
 
         /* Función que consulta los datos de de números de atenciones en el tiempo */
         public async Task<RequestResult> GetAttentionsByTimeLine(Guid? BusinessLineId)
         {
             var result = await _context.Attentions
-                .Where(a => a.CreatedAt >= DateTime.Now.AddDays(-10)) // Filtra los últimos 10 días
-                .GroupBy(a => new { Year = a.CreatedAt.Value.Year, Month = a.CreatedAt.Value.Month, Day = a.CreatedAt.Value.Day }) // Agrupa por año, mes y día
+                .Where(a => a.CreatedAt >= DateTime.Now.AddDays(-10))
+                .GroupBy(a => new { Year = a.CreatedAt.Value.Year, Month = a.CreatedAt.Value.Month, Day = a.CreatedAt.Value.Day })
                 .Select(g => new
                 {
                     Date = g.Key,
@@ -69,16 +94,51 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                 })
                 .OrderBy(x => x.Date.Year)
                 .ThenBy(x => x.Date.Month)
-                .ThenBy(x => x.Date.Day) 
+                .ThenBy(x => x.Date.Day)
                 .ToListAsync();
-                       var formattedResult = result.Select(x => new
-                       {
-                           YearMonth = $"{x.Date.Year}-{x.Date.Month:00}-{x.Date.Day:00}",
-                           x.Count
-                       }).ToList();
-
-
-            return RequestResult.SuccessResult(formattedResult);
+            return RequestResult.SuccessResult(result?.Select(x => new
+            {
+                YearMonth = $"{x.Date.Year}-{x.Date.Month:00}-{x.Date.Day:00}",
+                x.Count
+            }));
         }
+
+        /* Función que consulta los datos de las atenciones finalizadas */
+        public async Task<RequestResult> GetPercentAttentionsFinish(Guid? BusinessLineId)
+        {
+            var resultado = await _context.Attentions
+                .GroupBy(a => a.AttentionState.Code)
+                .Select(g => new
+                {
+                    Status = g.Key,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+            var totalAtenciones = resultado.Sum(r => r.Count);
+            var atencionesFinalizadas = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.FINA.ToString()))?.Count ?? 0;
+            double porcentajeAtencionesFinalizadas = 0;
+            if (totalAtenciones > 0)
+                porcentajeAtencionesFinalizadas = (double)atencionesFinalizadas / totalAtenciones * 100;
+            return RequestResult.SuccessResult(porcentajeAtencionesFinalizadas);
+        }
+
+        /* Función que consulta los datos de las atenciones finalizadas */
+        public async Task<RequestResult> GetNumberAttentionsByCity(Guid? BusinessLineId)
+        {
+            var resultByCity = await _context.Attentions
+                .GroupBy(a => a.Patient.City.Name)
+                .Select(g => new
+                {
+                    City = g.Key,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+            return RequestResult.SuccessResult(resultByCity?.Select(x => new
+            {
+                City = x.City,
+                x.Count
+            }));
+        }
+
     }
 }

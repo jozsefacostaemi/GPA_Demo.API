@@ -308,6 +308,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
                 if (!result.Success)
                     await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+                else
+                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
+
             }
 
             else

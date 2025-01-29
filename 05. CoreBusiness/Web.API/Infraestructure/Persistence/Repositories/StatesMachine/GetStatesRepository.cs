@@ -29,7 +29,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
                     var assignedPersonState = await GetPersonState(PersonStateEnum.ASIG);
                     var assignedAttentionState = await GetAttentionState(AttentionStateEnum.ASIG);
                     var pendingAttentionState = await GetAttentionState(AttentionStateEnum.PEND);
-                    return new StatesMachineResponse { patientStateId = assignedPersonState, healthCareStaffStateId = assignedPersonState, attentionStateTargetId = pendingAttentionState, attentionStateActualId = assignedAttentionState};
+                    return new StatesMachineResponse { patientStateId = assignedPersonState, healthCareStaffStateId = assignedPersonState, attentionStateTargetId = assignedAttentionState, attentionStateActualId = pendingAttentionState };
 
               
                 //TODO

@@ -78,7 +78,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var HealthCareStaff = await GetHealthCareStaffById(HealthCareStaffId);
             if (HealthCareStaff == null) return RequestResult.ErrorResult($"No existe información para el personal asistencial: {HealthCareStaffId}");
             (string, Guid?, Guid?) getNameQueuePendingGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateActualId);
-            (string, Guid?, Guid?) getNameQueueAsignedGenerated= await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateTargetId);
+            (string, Guid?, Guid?) getNameQueueAsignedGenerated = await GetQueueNameConfig(HealthCareStaff.processCode, new { HealthCareStaff.LevelQueueCode, HealthCareStaff.DepartmentId, HealthCareStaff.CountryId, HealthCareStaff.CityId }, (Guid)machineStates.attentionStateTargetId);
             if (string.IsNullOrEmpty(getNameQueueAsignedGenerated.Item1) || string.IsNullOrEmpty(getNameQueuePendingGenerated.Item1)) return RequestResult.ErrorResult($"No existen colas configuradas para el proceso, ciudad e información para el evento de proceso {StateEventProcessEnum.ASIGNATION}");
             string resultEmitMessageAttention = await _messagingFunctions.EmitMessageAsign(getNameQueueAsignedGenerated.Item1, getNameQueuePendingGenerated.Item1, HealthCareStaffId);
             if (string.IsNullOrEmpty(resultEmitMessageAttention)) return RequestResult.ErrorResult($"No se encontró información para la cola de asignación");
@@ -303,7 +303,13 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         {
             var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
             if (getHealCareStaffAvailable?.Data != null)
-                await AssignAttention((Guid)getHealCareStaffAvailable.Data);
+            {
+                var result = await AssignAttention((Guid)getHealCareStaffAvailable.Data);
+                /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
+                if (!result.Success)
+                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+            }
+
             else
                 await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
         }

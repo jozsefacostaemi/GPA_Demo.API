@@ -4,6 +4,7 @@ using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core;
+using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notifications;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
 {
@@ -12,12 +13,14 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
         private readonly ApplicationDbContext _context;
         private readonly IEmitMessagesRepository _IEmitMessagesRepository;
         private readonly IHealthCareStaffRepository _IHealthCareStaffRepository;
+        private readonly NotificationRepository _NotificationRepository;
         private readonly List<string> LstStatesCanNotLoggued = new List<string> { PersonStateEnum.ASIG.ToString(), PersonStateEnum.ENPRO.ToString() };
-        public LoginRepository(ApplicationDbContext context, IEmitMessagesRepository IEmitMessagesRepository, IHealthCareStaffRepository IHealthCareStaffRepository)
+        public LoginRepository(ApplicationDbContext context, IEmitMessagesRepository IEmitMessagesRepository, IHealthCareStaffRepository IHealthCareStaffRepository, NotificationRepository NotificationRepository)
         {
             _context = context;
             _IEmitMessagesRepository = IEmitMessagesRepository;
             _IHealthCareStaffRepository = IHealthCareStaffRepository;
+            _NotificationRepository = NotificationRepository;
         }
         /* Función que valida las credenciales del personal asistencial */
         public async Task<RequestResult> LogIn(string userName, string password)
@@ -36,7 +39,12 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
             /* Si hay médico disponible, asignamos la cita automaticamente */
             var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
             if (getHealCareStaffAvailable?.Data != null)
-                await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
+            {
+                var result = await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
+                /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
+                if (!result.Success)
+                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+            }
             return RequestResult.SuccessResult(message: "Login Exitoso", data: healthCareStaff);
         }
         /* Función que cierre la sesión del personal asistencial */

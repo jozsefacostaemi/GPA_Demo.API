@@ -16,5 +16,7 @@
         public string Plan { get; set; }
         public string StartDate { get; set; }
         public string EndDate { get; set; }
+        public string? PatientNum { get; set; }
+        public int? Comorbidities { get; set; }
     }
 }

@@ -76,8 +76,9 @@ namespace Lib.MessageQueues.Functions.Repositories
         /* Función que emite un mensaje pendiente */
         public async Task EmitMessagePending(string queueName, Guid attentionId, Guid patientId, Guid cityId, Guid processId, byte priority)
         {
+            OpenChannel();
             var properties = channel.CreateBasicProperties();
-            properties.Persistent = true; 
+            properties.Persistent = true;
             properties.Priority = priority;
             channel.BasicPublish(exchange: "",
                                  routingKey: queueName,
@@ -87,6 +88,7 @@ namespace Lib.MessageQueues.Functions.Repositories
         /* Función que emite un mensaje asignado */
         public async Task<string> EmitMessageAsign(string queueNameAsign, string queueNamePend, Guid HealthCareStaffId)
         {
+            OpenChannel();
             MessageInfo messageInfo = new();
             var result = channel.BasicGet(queue: queueNamePend, autoAck: false);
             if (result != null)

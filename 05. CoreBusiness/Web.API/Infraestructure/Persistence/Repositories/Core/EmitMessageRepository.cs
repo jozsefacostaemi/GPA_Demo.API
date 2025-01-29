@@ -62,15 +62,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
             /* Si hay médico disponible, asignamos la cita automaticamente */
             var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
-            if (getHealCareStaffAvailable != null && getHealCareStaffAvailable.Data != null)
-            {
-                return await AssignAttention((Guid)getHealCareStaffAvailable.Data);
-            }
+            if (getHealCareStaffAvailable?.Data != null) return await AssignAttention((Guid)getHealCareStaffAvailable.Data);
             else
-            {
                 await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
-            }
-                
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: resultAttention);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
@@ -101,6 +95,71 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         /* Función que cancela la atención */
         public async Task<RequestResult> CancelAttention(Guid AttentionId) => await EmitAttention(AttentionId, StateEventProcessEnum.CANCELLATION);
 
+        /* Función que consulta parametrización a nivel de procesos, ciudad, departamento, pais y linea de negocio*/
+        public async Task<(string?, Guid?, Guid?)> GetQueueNameConfig(string processCode, dynamic person, Guid? attentionStateActualId)
+        {
+            string queueName = string.Empty;
+            Guid? GeneratedQueueId = Guid.Empty;
+            Guid? BusinessLineLevelValueQueueConf = Guid.Empty;
+            if (Enum.TryParse(person.LevelQueueCode, out LevelEnum levelProcess))
+            {
+                string LevelQueueCode = person.LevelQueueCode;
+
+                IQueryable<GeneratedQueue> query = _context.GeneratedQueues
+                    .Include(x => x.ConfigQueue).ThenInclude(x => x.BusinessLineLevelValueQueueConf)
+                    .Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.Process.Code.Equals(processCode))
+                    .Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueue.Code.Equals(LevelQueueCode))
+                    .Where(x => x.ConfigQueue.AttentionStateId.Equals(attentionStateActualId));
+
+                switch (levelProcess)
+                {
+                    case LevelEnum.PAI:
+                        Guid countryPatient = (Guid)person.CountryId;
+                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.CountryId.Equals(countryPatient));
+                        break;
+                    case LevelEnum.DEP:
+                        Guid departmentPatient = (Guid)person.DepartmentId;
+                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.DepartmentId.Equals(departmentPatient));
+                        break;
+                    case LevelEnum.CIU:
+                        Guid cityPatient = (Guid)person.CityId;
+                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.CityId.Equals(cityPatient));
+                        break;
+                }
+
+                // Ejecutar la consulta de forma asincrónica
+                var result = await query.FirstOrDefaultAsync();
+                if (result == null)
+                    return (string.Empty, Guid.Empty, Guid.Empty);
+                queueName = result.Name;
+                GeneratedQueueId = result.Id;
+                BusinessLineLevelValueQueueConf = result.ConfigQueue.BusinessLineLevelValueQueueConfId;
+            }
+            return (queueName, GeneratedQueueId, BusinessLineLevelValueQueueConf);
+        }
+
+        /* Función que elimina las atenciones y actualiza los estados de los pacientes y personales asistenciales a pendiente  */
+        public async Task<AttentionResponse?> GetAttentionsById(Guid AttentionId)
+        => await _context.Attentions
+                .Where(z => z.Id.Equals(AttentionId))
+                .Select(x => new AttentionResponse
+                {
+                    AttentionId = x.Id,
+                    Priority = x.Priority,
+                    HealthCareStaff = x.HealthCareStaff != null ? x.HealthCareStaff.Name : "N/A",
+                    Patient = x.Patient != null ? x.Patient.Name : "N/A",
+                    Process = x.Process != null ? x.Process.Name : string.Empty,
+                    City = x.Patient != null && x.Patient.City != null ? x.Patient.City.Name : string.Empty,
+                    Comorbities = x.Patient != null && x.Patient.Comorbidities != null ? (int)x.Patient.Comorbidities : 0,
+                    Age = x.Patient != null && x.Patient.Birthday != null ? CalculatedAge.YearsMonthsDays(Convert.ToDateTime(x.Patient.Birthday)) : string.Empty,
+                    State = x.AttentionState != null ? x.AttentionState.Name : string.Empty,
+                    Plan = x.Patient != null && x.Patient.Plan != null ? x.Patient.Plan.Name : "N/A",
+                    StartDate = x.CreatedAt.HasValue ? x.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") : string.Empty,
+                    EndDate = x.EndDate != null ? $"{x.EndDate.Value.ToString("yyyy-MM-dd HH:mm:ss")}" : string.Empty,
+                    PatientId = x.Patient != null ? x.Patient.Id : Guid.Empty,
+                    HealthCareStaffId = x.HealthCareStaff != null ? x.HealthCareStaff.Id : Guid.Empty,
+                })
+                .FirstOrDefaultAsync();
 
         #endregion
 
@@ -198,9 +257,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (!sucessMessageMove) return RequestResult.ErrorResult($"Hubo un problema al momento de consumir la cola");
             await InsertHistoryAttention(AttentionId, (Guid)machineStates.attentionStateTargetId, (Guid)getNameQueueTarget.Item2);
             await UpdateMachineStates(AttentionId, (Guid)machineStates.attentionStateTargetId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING ? true : false, eventProcess == StateEventProcessEnum.CANCELLATION ? true : false);
-            var processResult = await GetAndEmitProcessResult(eventProcess, AttentionId.ToString());
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
             var resultAttention = await GetAttentionsById(AttentionId);
+            string processResult = await GetAndEmitProcessResult(eventProcess, AttentionId.ToString(), resultAttention);
             return RequestResult.SuccessRecord(data: resultAttention, message: processResult);
         }
         /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
@@ -218,93 +276,36 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             return priority;
         }
         /* Función que devuelve resultado string y emite evento de SignalR */
-        private async Task<string> GetAndEmitProcessResult(StateEventProcessEnum StateEventProcessEnum, string AttentionId)
+        private async Task<string> GetAndEmitProcessResult(StateEventProcessEnum StateEventProcessEnum, string AttentionId, AttentionResponse resultAttention)
         {
+            if (StateEventProcessEnum == StateEventProcessEnum.ENDING || StateEventProcessEnum == StateEventProcessEnum.CANCELLATION)
+                await MapDataEndOrCancelAttention();
             switch (StateEventProcessEnum)
             {
                 case StateEventProcessEnum.INITIATION:
-                    {
-                        //await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.InProcessAttention, AttentionId);
-                        return "Inicio de atención exitosa";
-                    }
+                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+                    return "Inicio de atención exitosa";
+
                 case StateEventProcessEnum.ENDING:
-                    {
-                        //await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.FinishAttention, AttentionId);
-                        return "Finalización de atención exitosa";
-                    }
+                    return "Finalización de atención exitosa";
+
                 case StateEventProcessEnum.CANCELLATION:
-                    {
-                        //await _notificationService.SendBroadcastAsync(NotificationEventCodeEnum.CancelAttention, AttentionId);
-                        return "Cancelación de atención exitosa";
-                    }
+                    return "Cancelación de atención exitosa";
+
+                default:
+                    return "Proceso realizado con éxito";
             }
-            return "Proceso realizado con éxito";
         }
-        /* Función que consulta parametrización a nivel de procesos, ciudad, departamento, pais y linea de negocio*/
-        public async Task<(string?, Guid?, Guid?)> GetQueueNameConfig(string processCode, dynamic person, Guid? attentionStateActualId)
+
+        /* Función que mapea los datos en el SignalR cuando una atención es cancelado o finalizada */
+        private async Task MapDataEndOrCancelAttention()
         {
-            string queueName = string.Empty;
-            Guid? GeneratedQueueId = Guid.Empty;
-            Guid? BusinessLineLevelValueQueueConf = Guid.Empty;
-            if (Enum.TryParse(person.LevelQueueCode, out LevelEnum levelProcess))
-            {
-                string LevelQueueCode = person.LevelQueueCode;
-
-                IQueryable<GeneratedQueue> query = _context.GeneratedQueues
-                    .Include(x => x.ConfigQueue).ThenInclude(x => x.BusinessLineLevelValueQueueConf)
-                    .Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.Process.Code.Equals(processCode))
-                    .Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueue.Code.Equals(LevelQueueCode))
-                    .Where(x => x.ConfigQueue.AttentionStateId.Equals(attentionStateActualId));
-
-                switch (levelProcess)
-                {
-                    case LevelEnum.PAI:
-                        Guid countryPatient = (Guid)person.CountryId;
-                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.CountryId.Equals(countryPatient));
-                        break;
-                    case LevelEnum.DEP:
-                        Guid departmentPatient = (Guid)person.DepartmentId;
-                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.DepartmentId.Equals(departmentPatient));
-                        break;
-                    case LevelEnum.CIU:
-                        Guid cityPatient = (Guid)person.CityId;
-                        query = query.Where(x => x.ConfigQueue.BusinessLineLevelValueQueueConf.CityId.Equals(cityPatient));
-                        break;
-                }
-
-                // Ejecutar la consulta de forma asincrónica
-                var result = await query.FirstOrDefaultAsync();
-                if (result == null)
-                    return (string.Empty, Guid.Empty, Guid.Empty);
-                queueName = result.Name;
-                GeneratedQueueId = result.Id;
-                BusinessLineLevelValueQueueConf = result.ConfigQueue.BusinessLineLevelValueQueueConfId;
-            }
-            return (queueName, GeneratedQueueId, BusinessLineLevelValueQueueConf);
+            var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
+            if (getHealCareStaffAvailable?.Data != null)
+                await AssignAttention((Guid)getHealCareStaffAvailable.Data);
+            else
+                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
         }
-
-        /* Función que elimina las atenciones y actualiza los estados de los pacientes y personales asistenciales a pendiente  */
-        public async Task<AttentionResponse?> GetAttentionsById(Guid AttentionId)
-        => await _context.Attentions
-                .Where(z => z.Id.Equals(AttentionId))
-                .Select(x => new AttentionResponse
-                {
-                    AttentionId = x.Id,
-                    Priority = x.Priority,
-                    HealthCareStaff = x.HealthCareStaff != null ? x.HealthCareStaff.Name : "N/A",
-                    Patient = x.Patient != null ? x.Patient.Name : "N/A",
-                    Process = x.Process != null ? x.Process.Name : string.Empty,
-                    City = x.Patient != null && x.Patient.City != null ? x.Patient.City.Name : string.Empty,
-                    Comorbities = x.Patient != null && x.Patient.Comorbidities != null ? (int)x.Patient.Comorbidities : 0,
-                    Age = x.Patient != null && x.Patient.Birthday != null ? CalculatedAge.YearsMonthsDays(Convert.ToDateTime(x.Patient.Birthday)) : string.Empty,
-                    State = x.AttentionState != null ? x.AttentionState.Name : string.Empty,
-                    Plan = x.Patient != null && x.Patient.Plan != null ? x.Patient.Plan.Name : "N/A",
-                    StartDate = x.CreatedAt.HasValue ? x.CreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") : string.Empty,
-                    EndDate = x.EndDate != null ? $"{x.EndDate.Value.ToString("yyyy-MM-dd HH:mm:ss")}" : string.Empty,
-                    PatientId = x.Patient != null ? x.Patient.Id : Guid.Empty,
-                    HealthCareStaffId = x.HealthCareStaff != null ? x.HealthCareStaff.Id : Guid.Empty,
-                })
-                .FirstOrDefaultAsync();
     }
     #endregion
 }

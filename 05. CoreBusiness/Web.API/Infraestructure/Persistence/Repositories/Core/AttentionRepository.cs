@@ -37,6 +37,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     Priority = x.Priority,
                     HealthCareStaff = x.HealthCareStaff != null ? x.HealthCareStaff.Name : "N/A",
                     Patient = x.Patient != null ? x.Patient.Name : "N/A",
+                    PatientNum = x.Patient != null ? x.Patient.Identification : string.Empty,
+                    Comorbidities = x.Patient != null ? x.Patient.Comorbidities : 0,                    
                     Process = x.Process != null ? x.Process.Name : string.Empty,
                     City = x.Patient != null && x.Patient.City != null ? x.Patient.City.Name : string.Empty,
                     Comorbities = x.Patient != null && x.Patient.Comorbidities != null ? (int)x.Patient.Comorbidities : 0,
@@ -79,7 +81,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 await _context.Patients.ExecuteUpdateAsync(x => x.SetProperty(p => p.PersonStateId, getStatusAvailable));
             }
         }
-
         #endregion
     }
 }

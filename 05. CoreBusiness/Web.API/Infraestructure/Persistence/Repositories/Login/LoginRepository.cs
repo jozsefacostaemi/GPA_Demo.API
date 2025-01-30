@@ -3,7 +3,6 @@ using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
-using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notifications;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
@@ -47,6 +46,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
                 else
                     await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
             }
+            else
+                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessResult(message: "Login Exitoso", data: healthCareStaff);
         }
         /* Función que cierre la sesión del personal asistencial */
@@ -60,6 +61,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
             gethealthCareStaff.Loggued = false;
             gethealthCareStaff.AvailableAt = null;
             await _context.SaveChangesAsync();
+            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessResult(message: "LogOut Exitoso", data: healthCareStaffId);
         }
     }

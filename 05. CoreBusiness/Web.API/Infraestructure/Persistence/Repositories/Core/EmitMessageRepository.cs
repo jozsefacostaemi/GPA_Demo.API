@@ -65,6 +65,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (getHealCareStaffAvailable?.Data != null) return await AssignAttention((Guid)getHealCareStaffAvailable.Data);
             else
                 await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: resultAttention);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
@@ -86,6 +87,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await UpdateMachineStates(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateTargetId, HealthCareStaffId, (Guid)machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId);
             var resultAttention = await GetAttentionsById(Guid.Parse(resultEmitMessageAttention));
             await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: resultAttention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */
@@ -260,6 +262,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await UpdateMachineStates(AttentionId, (Guid)machineStates.attentionStateTargetId, infoAttention.HealthCareStaffId, machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId, eventProcess == StateEventProcessEnum.CANCELLATION || eventProcess == StateEventProcessEnum.ENDING ? true : false, eventProcess == StateEventProcessEnum.CANCELLATION ? true : false);
             var resultAttention = await GetAttentionsById(AttentionId);
             string processResult = await GetAndEmitProcessResult(eventProcess, AttentionId.ToString(), resultAttention);
+            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessRecord(data: resultAttention, message: processResult);
         }
         /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */

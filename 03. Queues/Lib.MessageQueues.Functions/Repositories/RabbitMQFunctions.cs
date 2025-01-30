@@ -93,8 +93,6 @@ namespace Lib.MessageQueues.Functions.Repositories
             var result = channel.BasicGet(queue: queueNamePend, autoAck: false);
             if (result != null)
             {
-                channel.BasicAck(deliveryTag: result.DeliveryTag, multiple: false);
-
                 messageInfo = BuildMessageAsign(result, HealthCareStaffId.ToString());
                 messageInfo.HealthCareStaffId = HealthCareStaffId.ToString();
 
@@ -105,7 +103,7 @@ namespace Lib.MessageQueues.Functions.Repositories
                     routingKey: queueNameAsign,
                     basicProperties: properties,
                     body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(messageInfo)));
-
+                channel.BasicAck(deliveryTag: result.DeliveryTag, multiple: false);
                 return messageInfo.Id;
             }
             return string.Empty;

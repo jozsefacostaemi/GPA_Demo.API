@@ -3,12 +3,12 @@
 public class MessagingFunctionsFactory
 {
     private readonly IRabbitMQFunctions _rabbitMQFunctions;
-    private readonly IKafkaFunctions _kafkaFunctions;
+    //private readonly IKafkaFunctions _kafkaFunctions;
 
-    public MessagingFunctionsFactory(IRabbitMQFunctions rabbitMQFunctions, IKafkaFunctions kafkaFunctions)
+    public MessagingFunctionsFactory(IRabbitMQFunctions rabbitMQFunctions/*, IKafkaFunctions kafkaFunctions*/)
     {
         _rabbitMQFunctions = rabbitMQFunctions;
-        _kafkaFunctions = kafkaFunctions;
+        //_kafkaFunctions = kafkaFunctions;
     }
 
     public IMessagingFunctions GetMessagingFunctions()
@@ -18,7 +18,7 @@ public class MessagingFunctionsFactory
         return messagingSystem switch
         {
             "RabbitMQ" => _rabbitMQFunctions,
-            "Kafka" => _kafkaFunctions,
+            //"Kafka" => _kafkaFunctions,
             _ => throw new InvalidOperationException("Invalid messaging system configuration")
         };
     }

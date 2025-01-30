@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Shared;
 using Web.Core.Business.API.Domain.Interfaces;
 using Web.Core.Business.API.Enums;
+using Web.Core.Business.API.Helpers;
 using Web.Core.Business.API.Infraestructure.Persistence.Entities;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitoring
@@ -27,14 +28,20 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                 .Select(g => new
                 {
                     StateName = g.Key.Name,
-                    Count = g.Count(),
-                    Color = g.Key.Color
+                    Count = g.Count()
                 })
                 .ToListAsync();
-
-            if (attentionsByState.Any())
-                return RequestResult.SuccessResult(data: attentionsByState);
-            return RequestResult.SuccessResultNoRecords();
+            return RequestResult.SuccessResult(attentionsByState?.Select(x =>
+            {
+                var colorPair = GetColor.GetRandomColorPair();
+                return new
+                {
+                    Value = x.StateName,
+                    Count = x.Count,
+                    Background = colorPair.backgroundColor,
+                    Border = colorPair.borderColor
+                };
+            }));
         }
         /* Función que obtiene información de la CPU */
         public async Task<RequestResult> GetUsageCPU()
@@ -50,22 +57,25 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
         {
             var attentionsFinishByHealthCareStaff = await _context.Attentions
                 .Where(x => x.HealthCareStaff != null && !string.IsNullOrEmpty(x.AttentionState.Code) && x.AttentionState.Code.Equals(AttentionStateEnum.FINA.ToString()))
-                .GroupBy(x => new { x.HealthCareStaffId, x.HealthCareStaff.Name })
+                .GroupBy(x => new { x.HealthCareStaffId, x.HealthCareStaff.UserName })
                 .Select(x => new
                 {
-                    HealthCareStaffName = x.Key.Name,
+                    HealthCareStaffName = x.Key.UserName,
                     Count = x.Count()
                 }).ToListAsync();
-
-            var formattedResult = attentionsFinishByHealthCareStaff.Select(x => new
-            {
-                HealthCareStaff = x.HealthCareStaffName,
-                x.Count
-            }).ToList();
-
-            return RequestResult.SuccessResult(formattedResult);
+            return RequestResult.SuccessResult(attentionsFinishByHealthCareStaff?.Select(x =>
+                        {
+                            var colorPair = GetColor.GetRandomColorPair();
+                            return new
+                            {
+                                Value = x.HealthCareStaffName,
+                                Count = x.Count,
+                                Background = colorPair.backgroundColor,
+                                Border = colorPair.borderColor
+                            };
+                        }));
         }
-        /* Función que consulta la información de doctores logueados por atenciones */
+        /* Función que consulta la información de doctores logueados por atenciones OK */
         public async Task<RequestResult> GetLogguedHealthCareStaff(Guid? BusinessLineId)
         {
             var groupedUsers = await _context.HealthCareStaffs
@@ -78,7 +88,27 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                 .ToListAsync();
             var loggedUsers = groupedUsers.FirstOrDefault(g => g.Logged == true)?.Users;
             var notLoggedUsers = groupedUsers.FirstOrDefault(g => g.Logged == false)?.Users;
-            return RequestResult.SuccessResult(data: new { loggedUsers, notLoggedUsers });
+
+            List<dynamic> lstUsers = new List<dynamic>();
+
+            var colorPairLoggued = GetColor.GetRandomColorPair();
+            lstUsers.Add(new
+            {
+                Value = "Online",
+                Count = loggedUsers?.Count,
+                Background = colorPairLoggued.backgroundColor,
+                Border = colorPairLoggued.borderColor
+            });
+
+            var colorPairNoLoggued = GetColor.GetRandomColorPair();
+            lstUsers.Add(new
+            {
+                Value = "Offline",
+                Count = notLoggedUsers?.Count,
+                Background = colorPairNoLoggued.backgroundColor,
+                Border = colorPairNoLoggued.borderColor
+            });
+            return RequestResult.SuccessResult(lstUsers);
         }
 
         /* Función que consulta los datos de de números de atenciones en el tiempo */
@@ -96,10 +126,16 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                 .ThenBy(x => x.Date.Month)
                 .ThenBy(x => x.Date.Day)
                 .ToListAsync();
-            return RequestResult.SuccessResult(result?.Select(x => new
+            return RequestResult.SuccessResult(result?.Select(x =>
             {
-                YearMonth = $"{x.Date.Year}-{x.Date.Month:00}-{x.Date.Day:00}",
-                x.Count
+                var colorPair = GetColor.GetRandomColorPair();
+                return new
+                {
+                    Value = $"{x.Date.Year}-{x.Date.Month:00}-{x.Date.Day:00}",
+                    Count = x.Count,
+                    Background = colorPair.backgroundColor,
+                    Border = colorPair.borderColor
+                };
             }));
         }
 
@@ -122,7 +158,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
             return RequestResult.SuccessResult(porcentajeAtencionesFinalizadas);
         }
 
-        /* Función que consulta los datos de las atenciones finalizadas */
+        /* Función que consulta los datos de ciudades por paciente : OK */
         public async Task<RequestResult> GetNumberAttentionsByCity(Guid? BusinessLineId)
         {
             var resultByCity = await _context.Attentions
@@ -133,10 +169,16 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                     Count = g.Count()
                 })
                 .ToListAsync();
-            return RequestResult.SuccessResult(resultByCity?.Select(x => new
+            return RequestResult.SuccessResult(resultByCity?.Select(x =>
             {
-                City = x.City,
-                x.Count
+                var colorPair = GetColor.GetRandomColorPair();
+                return new
+                {
+                    Value = x.City,
+                    x.Count,
+                    Background = colorPair.backgroundColor,
+                    Border = colorPair.borderColor
+                };
             }));
         }
 

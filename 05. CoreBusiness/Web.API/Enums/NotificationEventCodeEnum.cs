@@ -2,6 +2,7 @@
 {
     public enum NotificationEventCodeEnum
     {
-        AttentionMessage
+        AttentionMessage,
+        Monitoring,
     }
 }

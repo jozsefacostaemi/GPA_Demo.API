@@ -19,7 +19,7 @@ namespace Web.Core.Business.API.Controllers
         [HttpGet("GetQuantityByState")]
         public async Task<RequestResult> GetAttentions(Guid? BusinessLine) => await _IMonitoringRepository.GetQuantityByState(BusinessLine);
 
-        [HttpGet("GetStadisticsByHealthCareStaff")]
+        [HttpGet("GetAttentionsFinishByHealthCareStaff")]
         public async Task<RequestResult> GetStadisticsByHealthCareStaff(Guid? BusinessLine) => await _IMonitoringRepository.GetAttentionsFinishByHealthCareStaff(BusinessLine);
 
         [HttpGet("GetLogguedByHealthCareStaff")]

@@ -44,7 +44,7 @@ builder.Services.AddScoped<ApplicationDbContext>();
 builder.Services.AddScoped<MessagingFunctionsFactory>();
 builder.Services.AddScoped<IQueueRepository, QueueRepository>();
 builder.Services.AddScoped<IRabbitMQFunctions, RabbitMQFunctions>();
-builder.Services.AddScoped<IKafkaFunctions, KafkaFunctions>();
+//builder.Services.AddScoped<IKafkaFunctions, KafkaFunctions>();
 #endregion
 
 #region Repositories and functions core

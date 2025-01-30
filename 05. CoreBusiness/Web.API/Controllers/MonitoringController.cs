@@ -33,5 +33,15 @@ namespace Web.Core.Business.API.Controllers
 
         [HttpGet("GetNumberAttentionsByCity")]
         public async Task<RequestResult> GetNumberAttentionsByCity(Guid? BusinessLine) => await _IMonitoringRepository.GetNumberAttentionsByCity(BusinessLine);
+
+
+        [HttpGet("GetQueuesActive")]
+        public async Task<RequestResult> GetQueuesActive(Guid? BusinessLineId) => await _IMonitoringRepository.GetQueuesActive(BusinessLineId);
+
+        [HttpGet("GetNumberActive")]
+        public async Task<RequestResult> GetNumberActive(Guid? BusinessLineId) => await _IMonitoringRepository.GetNumberActive(BusinessLineId);
+
+
+        
     }
 }

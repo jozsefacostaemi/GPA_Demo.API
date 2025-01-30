@@ -56,7 +56,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
         public async Task<RequestResult> GetAttentionsFinishByHealthCareStaff(Guid? BusinessLineId)
         {
             var attentionsFinishByHealthCareStaff = await _context.Attentions
-                .Where(x => x.HealthCareStaff != null && !string.IsNullOrEmpty(x.AttentionState.Code) && x.AttentionState.Code.Equals(AttentionStateEnum.FINA.ToString()))
+                .Where(x => x.HealthCareStaff != null && !string.IsNullOrEmpty(x.AttentionState.Code))
                 .GroupBy(x => new { x.HealthCareStaffId, x.HealthCareStaff.UserName })
                 .Select(x => new
                 {
@@ -151,11 +151,74 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
                 })
                 .ToListAsync();
             var totalAtenciones = resultado.Sum(r => r.Count);
+            var atencionesPendiente = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.PEND.ToString()))?.Count ?? 0;
+            var atencionesAsignadas = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.ASIG.ToString()))?.Count ?? 0;
+            var atencionesEnProceso = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.ENPRO.ToString()))?.Count ?? 0;
             var atencionesFinalizadas = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.FINA.ToString()))?.Count ?? 0;
+            var atencionesCanceladas = resultado.FirstOrDefault(r => r.Status.Equals(AttentionStateEnum.CANC.ToString()))?.Count ?? 0;
+
+            double porcentajeAtencionesPendiente = 0;
+            double porcentajeAtencionesAsignada = 0;
+            double porcentajeAtencionesEnproceso = 0;
             double porcentajeAtencionesFinalizadas = 0;
+            double porcentajeAtencionesCanceladas = 0;
             if (totalAtenciones > 0)
+            {
+                porcentajeAtencionesPendiente = (double)atencionesPendiente / totalAtenciones * 100;
+                porcentajeAtencionesAsignada = (double)atencionesAsignadas / totalAtenciones * 100;
+                porcentajeAtencionesEnproceso = (double)atencionesEnProceso / totalAtenciones * 100;
                 porcentajeAtencionesFinalizadas = (double)atencionesFinalizadas / totalAtenciones * 100;
-            return RequestResult.SuccessResult(porcentajeAtencionesFinalizadas);
+                porcentajeAtencionesCanceladas = (double)atencionesCanceladas / totalAtenciones * 100;
+
+            }
+            List<dynamic> lstAttentionTypes = new List<dynamic>();
+            var colorPairOne = GetColor.GetRandomColorPair();
+            var colorPairTwo = GetColor.GetRandomColorPair();
+            var colorPairThree = GetColor.GetRandomColorPair();
+            var colorPairFour = GetColor.GetRandomColorPair();
+            var colorPairFive = GetColor.GetRandomColorPair();
+            lstAttentionTypes.Add(new
+            {
+                Value = "Pendientes",
+                Count = porcentajeAtencionesPendiente,
+                Background = colorPairOne.backgroundColor,
+                Border = colorPairOne.borderColor
+            });
+
+            lstAttentionTypes.Add(new
+            {
+                Value = "Asignadas",
+                Count = porcentajeAtencionesAsignada,
+                Background = colorPairTwo.backgroundColor,
+                Border = colorPairTwo.borderColor
+            });
+
+
+            lstAttentionTypes.Add(new
+            {
+                Value = "En proceso",
+                Count = porcentajeAtencionesEnproceso,
+                Background = colorPairThree.backgroundColor,
+                Border = colorPairThree.borderColor
+            });
+
+            lstAttentionTypes.Add(new
+            {
+                Value = "Finalizadas",
+                Count = porcentajeAtencionesFinalizadas,
+                Background = colorPairFour.backgroundColor,
+                Border = colorPairFour.borderColor
+            });
+
+            lstAttentionTypes.Add(new
+            {
+                Value = "Canceladas",
+                Count = porcentajeAtencionesCanceladas,
+                Background = colorPairFive.backgroundColor,
+                Border = colorPairFive.borderColor
+            });
+            return RequestResult.SuccessResult(lstAttentionTypes);
+
         }
 
         /* Función que consulta los datos de ciudades por paciente : OK */
@@ -182,5 +245,57 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
             }));
         }
 
+        /* Función que consulta las colas activas */
+        public async Task<RequestResult> GetQueuesActive(Guid? businessLineId)
+        {
+            businessLineId = businessLineId == null || businessLineId == Guid.Empty ? Guid.Parse("DD44C571-4FA5-4133-AECD-062834C93601") : businessLineId;
+
+            Guid getLevelQueueId = await _context.BusinessLines.Where(x => x.Id.Equals(businessLineId)).Select(x => x.LevelQueueId).FirstOrDefaultAsync();
+
+            var confQueues = await _context.GeneratedQueues.Where(x => x.ConfigQueue != null && x.ConfigQueue.BusinessLineLevelValueQueueConf != null && x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.ConfigQueue.NOrder, Name = x.Name }).OrderBy(x => x.Order).ToListAsync();
+
+            if (confQueues != null)
+            {
+                return RequestResult.SuccessResult(confQueues?.Select(x =>
+                {
+                    var colorPair = GetColor.GetRandomColorPair();
+                    return new
+                    {
+                        Value = x.Name,
+                        Count = 1,
+                        Background = colorPair.backgroundColor,
+                        Border = colorPair.borderColor
+                    };
+                }));
+
+            }
+            return RequestResult.SuccessResultNoRecords();
+        }
+
+        /* Función que indica el numero de colas activas */
+        public async Task<RequestResult> GetNumberActive(Guid? businessLineId)
+        {
+            businessLineId = businessLineId == null || businessLineId == Guid.Empty ? Guid.Parse("DD44C571-4FA5-4133-AECD-062834C93601") : businessLineId;
+
+            Guid getLevelQueueId = await _context.BusinessLines.Where(x => x.Id.Equals(businessLineId)).Select(x => x.LevelQueueId).FirstOrDefaultAsync();
+
+            var confQueues = await _context.GeneratedQueues.Where(x => x.ConfigQueue != null && x.ConfigQueue.BusinessLineLevelValueQueueConf != null && x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.ConfigQueue.NOrder, Name = x.Name }).OrderBy(x => x.Order).ToListAsync();
+
+            List<dynamic> lstUsers = new List<dynamic>();
+            var colorPair = GetColor.GetRandomColorPair();
+
+            if (confQueues?.Count > 0)
+            {
+                lstUsers.Add(new
+                {
+                    Value = confQueues.Count(),
+                    Count = 1,
+                    Background = colorPair.backgroundColor,
+                    Border = colorPair.borderColor
+                });
+                return RequestResult.SuccessResult(lstUsers);
+            }
+            return RequestResult.SuccessResultNoRecords();
+        }
     }
 }

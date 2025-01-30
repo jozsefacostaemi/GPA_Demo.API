@@ -11,7 +11,12 @@ namespace Web.Core.Business.API.Domain.Interfaces
         Task<RequestResult> GetAttentionsByTimeLine(Guid? BusinessLineId);
         Task<RequestResult> GetPercentAttentionsFinish(Guid? BusinessLineId);
         Task<RequestResult> GetNumberAttentionsByCity(Guid? BusinessLineId);
+        Task<RequestResult> GetQueuesActive(Guid? BusinessLineId);
+        Task<RequestResult> GetNumberActive(Guid? BusinessLineId);
+
         
+
+
 
 
 

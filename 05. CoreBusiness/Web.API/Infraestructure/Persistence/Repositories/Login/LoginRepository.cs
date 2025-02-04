@@ -39,15 +39,14 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
             var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
             if (getHealCareStaffAvailable?.Data != null)
             {
-                var result = await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
+                var resultAttention = await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
                 /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
-                if (!result.Success)
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
-                else
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
+                if (resultAttention.Success) return resultAttention;
+                //else
+                //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
             }
-            else
-                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
+            //else
+            //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessResult(message: "Login Exitoso", data: healthCareStaff);
         }
         /* Función que cierre la sesión del personal asistencial */

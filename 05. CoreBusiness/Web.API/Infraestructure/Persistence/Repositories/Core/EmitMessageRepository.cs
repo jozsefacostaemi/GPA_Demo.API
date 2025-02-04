@@ -59,12 +59,12 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await _messagingFunctions.EmitMessagePending(getNameQueueGenerated.Item1, attentionId, patientId, (Guid)patient.CityId, process.Id, (byte)priority);
             await UpdateMachineStates(attentionId, (Guid)machineStates.attentionStateTargetId, null, null, (Guid)machineStates.patientStateId);
             var resultAttention = await GetAttentionsById(attentionId);
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+           // await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
             /* Si hay médico disponible, asignamos la cita automaticamente */
             var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
             if (getHealCareStaffAvailable?.Data != null) return await AssignAttention((Guid)getHealCareStaffAvailable.Data);
-            else
-                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+            //else
+                //await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
             await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: resultAttention);
         }
@@ -86,7 +86,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             await InsertHistoryAttention(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateTargetId, (Guid)getNameQueueAsignedGenerated.Item2);
             await UpdateMachineStates(Guid.Parse(resultEmitMessageAttention), (Guid)machineStates.attentionStateTargetId, HealthCareStaffId, (Guid)machineStates.healthCareStaffStateId, (Guid)machineStates.patientStateId);
             var resultAttention = await GetAttentionsById(Guid.Parse(resultEmitMessageAttention));
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+            //await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
             await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.Monitoring);
             return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: resultAttention);
         }
@@ -284,10 +284,12 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         {
             if (StateEventProcessEnum == StateEventProcessEnum.ENDING || StateEventProcessEnum == StateEventProcessEnum.CANCELLATION)
                 await MapDataEndOrCancelAttention();
+            //if(StateEventProcessEnum == StateEventProcessEnum.INITIATION)
+            //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
+
             switch (StateEventProcessEnum)
             {
                 case StateEventProcessEnum.INITIATION:
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
                     return "Inicio de atención exitosa";
 
                 case StateEventProcessEnum.ENDING:
@@ -309,15 +311,15 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             {
                 var result = await AssignAttention((Guid)getHealCareStaffAvailable.Data);
                 /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
-                if (!result.Success)
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
-                else
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
+                //if (!result.Success)
+                //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+                //else
+                //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
 
             }
 
-            else
-                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+            //else
+            //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
         }
     }
     #endregion

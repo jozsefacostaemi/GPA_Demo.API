@@ -31,13 +31,13 @@ namespace Web.Queue.API.Controllers
         [HttpPost("StartAttention")]
         public async Task<RequestResult> StartAttention([FromBody] RequestAttentionDTO request)
         {
-            return await _emitMessageRepository.InitAttention(request.AttentionId);
+            return await _emitMessageRepository.StartAttention(request.AttentionId);
         }
 
         [HttpPost("FinishAttention")]
         public async Task<RequestResult> FinishAttention([FromBody] RequestAttentionDTO request)
         {
-            return await _emitMessageRepository.EndAttention(request.AttentionId);
+            return await _emitMessageRepository.FinishAttention(request.AttentionId);
         }
         [HttpPost("CancelAttention")]
         public async Task<RequestResult> CancelAttention([FromBody] RequestAttentionDTO request)

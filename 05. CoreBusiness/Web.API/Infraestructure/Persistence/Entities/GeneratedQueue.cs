@@ -7,13 +7,13 @@ public partial class GeneratedQueue
 {
     public Guid Id { get; set; }
 
-    public string? Name { get; set; }
+    public Guid QueueConfId { get; set; }
 
-    public Guid ConfigQueueId { get; set; }
+    public string Name { get; set; } = null!;
 
-    public bool? Active { get; set; }
+    public bool Active { get; set; }
 
-    public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
+    public DateTime CreatedAt { get; set; }
 
-    public virtual ConfQueue ConfigQueue { get; set; } = null!;
+    public virtual QueueConf QueueConf { get; set; } = null!;
 }

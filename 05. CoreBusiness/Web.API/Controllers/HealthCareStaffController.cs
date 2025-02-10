@@ -14,7 +14,7 @@ namespace Web.Core.Business.API.Controllers
             _ihealthCareStaffRepository = ihealthCareStaffRepository;
 
         [HttpGet("SearchFirstHealCareStaffAvailable")]
-        public async Task<RequestResult> SearchFirstHealCareStaffAvailable() => await _ihealthCareStaffRepository.SearchFirstHealCareStaffAvailable();
+        public async Task<RequestResult> SearchFirstHealCareStaffAvailable(string ProcessCode) => await _ihealthCareStaffRepository.SearchFirstHealCareStaffAvailable(ProcessCode);
 
         [HttpGet("GetStateByHealthCareStaff")]
         public async Task<RequestResult> GetStateByHealthCareStaff(Guid HealthCareStaff) => await _ihealthCareStaffRepository.GetStateByHealthCareStaff(HealthCareStaff);

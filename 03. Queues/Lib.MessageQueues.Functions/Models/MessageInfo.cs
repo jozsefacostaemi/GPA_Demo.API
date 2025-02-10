@@ -8,10 +8,6 @@ namespace Lib.MessageQueues.Functions.Models
 {
     public class MessageInfo
     {
-        public string Id { get; set; }    
-        public string PatientId { get; set; }
-        public string HealthCareStaffId { get; set; }
-        public string CityId { get; set; }
-        public string ProcessId { get; set; }
+        public Guid Id { get; set; }    
     }
 }

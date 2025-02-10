@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="settings.json" />
+	  <Content Remove="settings.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="settings.json" />
+	  <None Include="settings.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\02. Notifications\Notifications.Lib\Notifications.Lib.csproj" />
     <ProjectReference Include="..\..\03. Queues\Lib.MessageQueues.Functions\Lib.MessageQueues.Functions.csproj" />
     <ProjectReference Include="..\..\Shared\Shared\Shared.csproj" />
   </ItemGroup>

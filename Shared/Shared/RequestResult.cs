@@ -38,12 +38,13 @@
 
 
         // Método estático para devolver un registro eliminado
-        public static RequestResult SuccessOperation(string message = "Operación exitosa", string module = "")
+        public static RequestResult SuccessOperation(string message = "Operación exitosa", string module = "", dynamic? data = null)
         {
             return new RequestResult
             {
                 Success = true,
                 Message = message,
+                Data = data,
                 Module = module
             };
         }

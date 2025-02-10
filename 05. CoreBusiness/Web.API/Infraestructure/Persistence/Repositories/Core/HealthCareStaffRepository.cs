@@ -49,10 +49,10 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 
 
         /* Función que consulta el primer personal asistencial disponible */
-        public async Task<RequestResult> SearchFirstHealCareStaffAvailable()
+        public async Task<RequestResult> SearchFirstHealCareStaffAvailable(string ProcessCode)
         {
             var getFirstHealCareStaffAvailable = await _context.HealthCareStaffs
-                .Where(x => x.PersonState != null && x.PersonState.Code.Equals(PersonStateEnum.DISP.ToString()) && x.Loggued == true && x.AvailableAt != null).OrderBy(x => x.AvailableAt).FirstOrDefaultAsync();
+                .Where(x => x.PersonState != null && x.Process.Code.Equals(ProcessCode) && x.PersonState.Code.Equals(PersonStateEnum.DISP.ToString()) && x.Loggued == true && x.AvailableAt != null).OrderBy(x => x.AvailableAt).FirstOrDefaultAsync();
             if (getFirstHealCareStaffAvailable != null)
                 return RequestResult.SuccessResult(data: getFirstHealCareStaffAvailable.Id);
             return RequestResult.SuccessResultNoRecords(message: "No hay médicos disponibles");

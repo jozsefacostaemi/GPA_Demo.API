@@ -17,7 +17,7 @@ public partial class LevelValueQueue
 
     public Guid ProcessId { get; set; }
 
-    public virtual ICollection<BusinessLineLevelValueQueuesConf> BusinessLineLevelValueQueuesConfs { get; set; } = new List<BusinessLineLevelValueQueuesConf>();
+    //public virtual ICollection<BusinessLineLevelValueQueuesConf> BusinessLineLevelValueQueuesConfs { get; set; } = new List<BusinessLineLevelValueQueuesConf>();
 
     public virtual City? City { get; set; }
 

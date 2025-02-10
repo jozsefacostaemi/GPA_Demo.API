@@ -31,31 +31,32 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
             if (businessLine != null)
             {
                 await _iattentionRepository.ResetAttentionsAndPersonStatus();
-                await deleteQueueGenerated();
+                await DeleteProcessMessagesErroLog();
+                await DeleteProcessMessages();
+                await DeleteQueueGenerated();
                 var getCodesForBusinessLine = await _context.BusinessLineLevelValueQueueConfigs
                      .Where(x => x.LevelQueueId.Equals(businessLine.LevelQueueId)).Select(x => x.Id).ToListAsync();
                 if (getCodesForBusinessLine.Any())
                 {
-                    var resultConfig = _context.ConfQueues.Where(x => x.Active == true && getCodesForBusinessLine.Contains(x.BusinessLineLevelValueQueueConf.Id)).Select(x => new
+                    var resultConfig = _context.QueueConfs.Where(x => x.Active == true && getCodesForBusinessLine.Contains(x.BusinessLineLevelValueQueueConf.Id)).Select(x => new
                     {
                         PreNameQueue =
                         x.BusinessLineLevelValueQueueConf.CountryId != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.Country.Name}" :
                         x.BusinessLineLevelValueQueueConf.Department != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.Department.Name}" :
                         x.BusinessLineLevelValueQueueConf.CityId != null ? $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}.{x.BusinessLineLevelValueQueueConf.City.Name}" : $"{businessLine.Code}.{x.BusinessLineLevelValueQueueConf.Process.Name}",
-                        StateName = x.AttentionState.Name,
                         x.NOrder,
                         ConfQueueId = x.Id,
                     }).ToList();
-                    var resultGeneratedQueues = await _context.GeneratedQueues.Where(x => x.Active == true).Select(x => x.ConfigQueueId).ToListAsync();
+                    var resultGeneratedQueues = await _context.GeneratedQueues.Where(x => x.Active == true).Select(x => x.QueueConfId).ToListAsync();
                     if (resultConfig.Any())
                     {
                         foreach (var drResultConfig in resultConfig)
                         {
                             if (!resultGeneratedQueues.Contains(drResultConfig.ConfQueueId))
                             {
-                                var generatedQueue = GeneratedNameQueue(drResultConfig.PreNameQueue?.Trim(), drResultConfig?.StateName.Trim(), (int)drResultConfig.NOrder);
+                                var generatedQueue = GeneratedNameQueue(drResultConfig.PreNameQueue?.Trim(), (int)drResultConfig.NOrder);
                                 if (!string.IsNullOrEmpty(generatedQueue))
-                                    await _context.AddAsync(new GeneratedQueue { Id = Guid.NewGuid(), Name = generatedQueue, Active = true, ConfigQueueId = drResultConfig.ConfQueueId });
+                                    await _context.AddAsync(new GeneratedQueue { Id = Guid.NewGuid(), Name = generatedQueue, Active = true, QueueConfId = drResultConfig.ConfQueueId, CreatedAt = DateTime.Now });
                             }
                         }
                         await _context.SaveChangesAsync();
@@ -69,19 +70,19 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
         /* Función que crea las colas en el orquestador de mensajeria */
         public async Task<bool> CreatedQueues()
         {
-            var resultGeneratedQueues = _context.GeneratedQueues.Include(x => x.ConfigQueue).Where(x => x.Active == true).ToList();
+            var resultGeneratedQueues = _context.GeneratedQueues.Include(x => x.QueueConf).Where(x => x.Active == true).ToList();
             foreach (var dr in resultGeneratedQueues)
             {
                 await _rabbitMQFunctions.CreateQueueAsync(dr.Name,
-                    dr.ConfigQueue.Durable,
-                    dr.ConfigQueue.Exclusive,
-                    dr.ConfigQueue.AutoDelete,
-                    dr.ConfigQueue.MaxPriority,
-                    dr.ConfigQueue.MessageLifeTime,
-                    dr.ConfigQueue.QueueExpireTime,
-                    dr.ConfigQueue.QueueMode,
-                    dr.ConfigQueue.QueueDeadLetterExchange,
-                    dr.ConfigQueue.QueueDeadLetterExchangeRoutingKey);
+                    dr.QueueConf.Durable,
+                    dr.QueueConf.Exclusive,
+                    dr.QueueConf.AutoDelete,
+                    dr.QueueConf.MaxPriority,
+                    dr.QueueConf.MessageLifeTime,
+                    dr.QueueConf.QueueExpireTime,
+                    dr.QueueConf.QueueMode,
+                    dr.QueueConf.QueueDeadLetterExchange,
+                    dr.QueueConf.QueueDeadLetterExchangeRoutingKey);
             }
             return true;
         }
@@ -95,17 +96,32 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
 
         #region Private Methods
         /* Función que genera el nombre de la cola */
-        private string GeneratedNameQueue(string prename, string state, int order)
+        private string GeneratedNameQueue(string prename, int order)
         {
-            if (!string.IsNullOrEmpty(prename) && !string.IsNullOrEmpty(state))
-                return $"{order}.{prename}.{state}";
+            if (!string.IsNullOrEmpty(prename))
+                return $"{order}.{prename}";
             return string.Empty;
         }
         /* Función que elimina todas las colas generadas */
-        private async Task deleteQueueGenerated()
+        private async Task DeleteQueueGenerated()
         {
             var deleteQueues = await _context.GeneratedQueues.ToListAsync();
             _context.GeneratedQueues.RemoveRange(deleteQueues);
+            await _context.SaveChangesAsync();
+        }
+        /* Función que elimina los messageProcess */
+        private async Task DeleteProcessMessages()
+        {
+            var processMessages = await _context.ProcessMessages.ToListAsync();
+            _context.ProcessMessages.RemoveRange(processMessages);
+            await _context.SaveChangesAsync();
+        }
+
+        /* Función que elimina los messageProcess */
+        private async Task DeleteProcessMessagesErroLog()
+        {
+            var processMessageErrorLogs = await _context.ProcessMessageErrorLogs.ToListAsync();
+            _context.ProcessMessageErrorLogs.RemoveRange(processMessageErrorLogs);
             await _context.SaveChangesAsync();
         }
         #endregion

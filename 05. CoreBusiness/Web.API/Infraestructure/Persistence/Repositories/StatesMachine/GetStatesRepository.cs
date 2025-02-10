@@ -20,64 +20,50 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMa
         {
             switch (state)
             {
-                case StateEventProcessEnum.CREATION:
+                case StateEventProcessEnum.CREATED:
 
                     var creationAttentionState = await GetAttentionState(AttentionStateEnum.PEND);
-                    return new StatesMachineResponse { patientStateId = await GetPersonState(PersonStateEnum.ESPASIGPA), attentionStateTargetId = creationAttentionState };
+                    return new StatesMachineResponse { Success = true, NextPatientStateId = await GetPersonState(PersonStateEnum.ESPASIGPA), NextAttentionStateId = creationAttentionState };
 
-                case StateEventProcessEnum.ASIGNATION:
-                    var assignedPersonState = await GetPersonState(PersonStateEnum.ASIG);
+                case StateEventProcessEnum.ASSIGNED:
+                    var AssigPersonStateId = await GetPersonState(PersonStateEnum.ASIG);
                     var assignedAttentionState = await GetAttentionState(AttentionStateEnum.ASIG);
                     var pendingAttentionState = await GetAttentionState(AttentionStateEnum.PEND);
-                    return new StatesMachineResponse { patientStateId = assignedPersonState, healthCareStaffStateId = assignedPersonState, attentionStateTargetId = assignedAttentionState, attentionStateActualId = pendingAttentionState };
+                    return new StatesMachineResponse { Success = true, NextPatientStateId = AssigPersonStateId, NextHealthCareStaffStateId = AssigPersonStateId, NextAttentionStateId = assignedAttentionState, ActualAttentionStateId = pendingAttentionState };
 
-              
-                //TODO
-                case StateEventProcessEnum.INITIATION:
+                case StateEventProcessEnum.INPROCESS:
                     var inProcessPersonState = await GetPersonState(PersonStateEnum.ENPRO);
                     var inProcessAttentionState = await GetAttentionState(AttentionStateEnum.ENPRO);
                     var assignedAttentionStatee = await GetAttentionState(AttentionStateEnum.ASIG);
-                    return new StatesMachineResponse { patientStateId = inProcessPersonState, healthCareStaffStateId = inProcessPersonState, attentionStateTargetId = inProcessAttentionState, attentionStateActualId = assignedAttentionStatee };
+                    return new StatesMachineResponse { Success = true, NextPatientStateId = inProcessPersonState, NextHealthCareStaffStateId = inProcessPersonState, NextAttentionStateId = inProcessAttentionState, ActualAttentionStateId = assignedAttentionStatee };
 
-                case StateEventProcessEnum.ENDING:
+                case StateEventProcessEnum.FINALIZED:
 
                     var endingPatientState = await GetPersonState(PersonStateEnum.ATEN);
                     var endingHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var endingAttentionState = await GetAttentionState(AttentionStateEnum.FINA);
                     var inProcessPreviousAttentionState = await GetAttentionState(AttentionStateEnum.ENPRO);
-                    return new StatesMachineResponse { patientStateId = endingPatientState, healthCareStaffStateId = endingHealthCareScaffState, attentionStateTargetId = endingAttentionState, attentionStateActualId = inProcessPreviousAttentionState };
+                    return new StatesMachineResponse { Success = true, NextPatientStateId = endingPatientState, NextHealthCareStaffStateId = endingHealthCareScaffState, NextAttentionStateId = endingAttentionState, ActualAttentionStateId = inProcessPreviousAttentionState };
 
-                case StateEventProcessEnum.CANCELLATION:
+                case StateEventProcessEnum.CANCELLED:
 
                     var cancelPatientState = await GetPersonState(PersonStateEnum.CANC);
                     var cancelHealthCareScaffState = await GetPersonState(PersonStateEnum.DISP);
                     var cancelAttentionState = await GetAttentionState(AttentionStateEnum.CANC);
-                    return new StatesMachineResponse { patientStateId = cancelPatientState, healthCareStaffStateId = cancelHealthCareScaffState, attentionStateTargetId = cancelAttentionState };
+                    return new StatesMachineResponse { Success = true, NextPatientStateId = cancelPatientState, NextHealthCareStaffStateId = cancelHealthCareScaffState, NextAttentionStateId = cancelAttentionState };
                 default:
                     break;
             }
-            return null;
+            return new StatesMachineResponse { Message = $"No existe información para el proceso {StateEventProcessEnum.CREATED}", Success = false };
         }
         #endregion
 
         #region Private Methods
         /* Función que consulta estado de Personal asistencial o Paciente */
-        private async Task<Guid?> GetPersonState(PersonStateEnum code)
-        {
-            var personState = await _context.PersonStates.AsNoTracking()
-                .Where(x => x.Code.Equals(code.ToString()))
-                .FirstOrDefaultAsync();
-            return personState?.Id;
-        }
+        private async Task<Guid> GetPersonState(PersonStateEnum code) => await _context.PersonStates.AsNoTracking().Where(x => x.Code.Equals(code.ToString())).Select(x => x.Id).SingleOrDefaultAsync();
         /* Función que consulta estado de la atención*/
-        private async Task<Guid?> GetAttentionState(AttentionStateEnum code)
-        {
-            var attentionState = await _context.AttentionStates.AsNoTracking()
-                .Where(x => x.Code.Equals(code.ToString()))
-                .FirstOrDefaultAsync();
+        private async Task<Guid> GetAttentionState(AttentionStateEnum code) =>await _context.AttentionStates.AsNoTracking().Where(x => x.Code.Equals(code.ToString())).Select(x=>x.Id).SingleOrDefaultAsync();
 
-            return (attentionState?.Id);
-        }
 
         #endregion
 

@@ -21,13 +21,9 @@ public partial class BusinessLineLevelValueQueueConfig
 
     public bool Active { get; set; }
 
-    public virtual ICollection<Attention> Attentions { get; set; } = new List<Attention>();
-
     public virtual BusinessLine? BusinessLine { get; set; }
 
     public virtual City? City { get; set; }
-
-    public virtual ICollection<ConfQueue> ConfQueues { get; set; } = new List<ConfQueue>();
 
     public virtual Country? Country { get; set; }
 
@@ -36,4 +32,6 @@ public partial class BusinessLineLevelValueQueueConfig
     public virtual LevelQueue LevelQueue { get; set; } = null!;
 
     public virtual Processor Process { get; set; } = null!;
+
+    public virtual ICollection<QueueConf> QueueConfs { get; set; } = new List<QueueConf>();
 }

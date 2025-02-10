@@ -29,17 +29,15 @@ public partial class Attention
 
     public DateTime? CreatedAt { get; set; }
 
-    public Guid BusinessLineLevelValueQueueConfigId { get; set; }
-
     public virtual ICollection<AttentionHistory> AttentionHistories { get; set; } = new List<AttentionHistory>();
 
     public virtual AttentionState AttentionState { get; set; } = null!;
-
-    public virtual BusinessLineLevelValueQueueConfig BusinessLineLevelValueQueueConfig { get; set; } = null!;
 
     public virtual HealthCareStaff? HealthCareStaff { get; set; }
 
     public virtual Patient Patient { get; set; } = null!;
 
     public virtual Processor? Process { get; set; }
+
+    public virtual ICollection<ProcessMessage> ProcessMessages { get; set; } = new List<ProcessMessage>();
 }

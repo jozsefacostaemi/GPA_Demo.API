@@ -5,19 +5,19 @@ namespace Web.Core.Business.API.Enums
     public enum StateEventProcessEnum
     {
         [EnumMember(Value = "CREATION")]
-        CREATION = 1,
+        CREATED = 1,
 
         [EnumMember(Value = "ASIGNATION")]
-        ASIGNATION = 2,
+        ASSIGNED = 2,
 
         [EnumMember(Value = "INITIATION")]
-        INITIATION = 3,
+        INPROCESS = 3,
 
         [EnumMember(Value = "ENDING")]
-        ENDING = 4,
+        FINALIZED = 4,
 
         [EnumMember(Value = "CANCELLATION")]
-        CANCELLATION = 5,
+        CANCELLED = 5,
 
         [EnumMember(Value = "AVAILABLE_HEALTHCARESTAFF")]
         AVAILABLE_HEALTHCARESTAFF = 6,

@@ -17,32 +17,68 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
         public async Task<RequestResult> GetQuantityByState(Guid? BusinessLineId)
         {
             Guid BusinessLine = BusinessLineId.HasValue ? BusinessLineId.Value : Guid.Parse("DD44C571-4FA5-4133-AECD-062834C93601");
-            Guid levelQueueByBusinessLine = await _context.BusinessLines.Where(x => x.Id.Equals(BusinessLine)).Select(x => x.LevelQueueId).FirstOrDefaultAsync();
-            var getStatesAttention = await _context.AttentionStates.Where(x => x.Active == true).Select(x => new { x.Id, x.Name }).ToListAsync();
+
+            // Obtener el LevelQueueId basado en el BusinessLineId
+            Guid levelQueueByBusinessLine = await _context.BusinessLines
+                .Where(x => x.Id.Equals(BusinessLine))
+                .Select(x => x.LevelQueueId)
+                .FirstOrDefaultAsync();
+
+            // Obtener los estados de atención activos
+            var getStatesAttention = await _context.AttentionStates
+                .Where(x => x.Active == true)
+                .Select(x => new { x.Id, x.Name })
+                .ToListAsync();
+
             if (!getStatesAttention.Any())
                 return RequestResult.SuccessResultNoRecords();
 
+            // Obtener las atenciones agrupadas por proceso y estado de atención
             var attentionsByState = await _context.Attentions
                 .Where(x => getStatesAttention.Select(s => s.Id).Contains(x.AttentionStateId))
-                .GroupBy(x => new { x.AttentionStateId, x.AttentionState.Name, x.AttentionState.Color })
+                .GroupBy(x => new { x.ProcessId, ProcessName = x.Process.Name, StateAttentionName = x.AttentionState.Name, x.AttentionState.Color, x.AttentionState.Id })
                 .Select(g => new
                 {
-                    StateName = g.Key.Name,
-                    Count = g.Count()
+                    ProcessName = g.Key.ProcessName,
+                    StateAttentionName = g.Key.StateAttentionName,
+                    Count = g.Count(),
+                    Color = g.Key.Color,
+                    StateAttentionId = g.Key.Id 
                 })
                 .ToListAsync();
-            return RequestResult.SuccessResult(attentionsByState?.Select(x =>
+
+            var color = GetColor.GetRandomColorPair();
+
+            var groupedByProcess = attentionsByState
+                .GroupBy(x => x.ProcessName) 
+                .ToDictionary(
+                    g => g.Key,  
+                    g => g
+                        .OrderBy(x => x.StateAttentionId)
+                        .Select(x =>
+                        {
+                            var color = GetColor.GetRandomColorPair(); 
+                            return new
+                            {
+                                Value = x.StateAttentionName,
+                                Count = x.Count,
+                                Background = color.backgroundColor, 
+                                Border = color.borderColor          
+                            };
+                        })
+                        .ToArray() 
+                );
+
+
+            var finalResult = groupedByProcess.Select(group => new
             {
-                var colorPair = GetColor.GetRandomColorPair();
-                return new
-                {
-                    Value = x.StateName,
-                    Count = x.Count,
-                    Background = colorPair.backgroundColor,
-                    Border = colorPair.borderColor
-                };
-            }));
+                ProcessName = group.Key,
+                Data = group.Value  
+            }).ToList();
+
+            return RequestResult.SuccessResult(finalResult);
         }
+
         /* Función que obtiene información de la CPU */
         public async Task<RequestResult> GetUsageCPU()
         {
@@ -252,7 +288,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
 
             Guid getLevelQueueId = await _context.BusinessLines.Where(x => x.Id.Equals(businessLineId)).Select(x => x.LevelQueueId).FirstOrDefaultAsync();
 
-            var confQueues = await _context.GeneratedQueues.Where(x => x.ConfigQueue != null && x.ConfigQueue.BusinessLineLevelValueQueueConf != null && x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.ConfigQueue.NOrder, Name = x.Name }).OrderBy(x => x.Order).ToListAsync();
+            var confQueues = await _context.GeneratedQueues.Where(x => x.QueueConfId != null && x.QueueConf.BusinessLineLevelValueQueueConf != null && x.QueueConf.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.QueueConf.NOrder, Name = x.Name }).OrderByDescending(x => x.Order).ToListAsync();
 
             if (confQueues != null)
             {
@@ -279,7 +315,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Monitor
 
             Guid getLevelQueueId = await _context.BusinessLines.Where(x => x.Id.Equals(businessLineId)).Select(x => x.LevelQueueId).FirstOrDefaultAsync();
 
-            var confQueues = await _context.GeneratedQueues.Where(x => x.ConfigQueue != null && x.ConfigQueue.BusinessLineLevelValueQueueConf != null && x.ConfigQueue.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.ConfigQueue.NOrder, Name = x.Name }).OrderBy(x => x.Order).ToListAsync();
+            var confQueues = await _context.GeneratedQueues.Where(x => x.QueueConf != null && x.QueueConf.BusinessLineLevelValueQueueConf != null && x.QueueConf.BusinessLineLevelValueQueueConf.LevelQueueId.Equals(getLevelQueueId)).Select(x => new { Order = x.QueueConf.NOrder, Name = x.Name }).OrderByDescending(x => x.Order).ToListAsync();
 
             List<dynamic> lstUsers = new List<dynamic>();
             var colorPair = GetColor.GetRandomColorPair();

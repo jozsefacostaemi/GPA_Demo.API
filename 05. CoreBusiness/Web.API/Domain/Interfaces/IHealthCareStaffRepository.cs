@@ -6,7 +6,7 @@ namespace Web.Core.Business.API.Domain.Interfaces
     {
         Task<RequestResult> UpdateStateForHealthCareStaff(Guid HealthCareStaff, string codeHealthCareStaff);
         Task<RequestResult> GetStateByHealthCareStaff(Guid HealthCareStaff);
-        Task<RequestResult> SearchFirstHealCareStaffAvailable();
+        Task<RequestResult> SearchFirstHealCareStaffAvailable(string ProcessCode);
 
     }
 }

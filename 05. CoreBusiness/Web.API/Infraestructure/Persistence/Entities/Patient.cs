@@ -7,7 +7,7 @@ public partial class Patient
 {
     public Guid Id { get; set; }
 
-    public string? Name { get; set; }
+    public string Name { get; set; } = null!;
 
     public Guid CityId { get; set; }
 

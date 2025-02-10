@@ -15,7 +15,7 @@ public partial class BussinessLine
 
     public virtual ICollection<HealthCareStaff> HealthCareStaffs { get; set; } = new List<HealthCareStaff>();
 
-    public virtual ICollection<LevelValue> LevelValues { get; set; } = new List<LevelValue>();
+    //public virtual ICollection<LevelValue> LevelValues { get; set; } = new List<LevelValue>();
 
     public virtual ICollection<Patient> Patients { get; set; } = new List<Patient>();
 }

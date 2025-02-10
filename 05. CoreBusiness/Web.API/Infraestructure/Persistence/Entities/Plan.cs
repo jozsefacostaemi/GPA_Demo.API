@@ -13,5 +13,7 @@ public partial class Plan
 
     public bool Acrive { get; set; }
 
+    public int Number { get; set; }
+
     public virtual ICollection<Patient> Patients { get; set; } = new List<Patient>();
 }

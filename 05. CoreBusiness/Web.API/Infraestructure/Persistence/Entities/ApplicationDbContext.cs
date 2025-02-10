@@ -27,8 +27,6 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<City> Cities { get; set; }
 
-    public virtual DbSet<ConfQueue> ConfQueues { get; set; }
-
     public virtual DbSet<Country> Countries { get; set; }
 
     public virtual DbSet<Department> Departments { get; set; }
@@ -47,7 +45,13 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Plan> Plans { get; set; }
 
+    public virtual DbSet<ProcessMessage> ProcessMessages { get; set; }
+
+    public virtual DbSet<ProcessMessageErrorLog> ProcessMessageErrorLogs { get; set; }
+
     public virtual DbSet<Processor> Processors { get; set; }
+
+    public virtual DbSet<QueueConf> QueueConfs { get; set; }
 
     public virtual DbSet<Rol> Rols { get; set; }
 
@@ -72,11 +76,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.AttentionStateId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attentions_AttentionStates");
-
-            entity.HasOne(d => d.BusinessLineLevelValueQueueConfig).WithMany(p => p.Attentions)
-                .HasForeignKey(d => d.BusinessLineLevelValueQueueConfigId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Attentions_BusinessLineLevelValueQueueConfig");
 
             entity.HasOne(d => d.HealthCareStaff).WithMany(p => p.Attentions)
                 .HasForeignKey(d => d.HealthCareStaffId)
@@ -109,11 +108,6 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.AttentionStateNavigation).WithMany(p => p.AttentionHistories)
                 .HasForeignKey(d => d.AttentionState)
                 .HasConstraintName("FK_AttentionHistories_AttentionStates");
-
-            entity.HasOne(d => d.GeneratedQueue).WithMany(p => p.AttentionHistories)
-                .HasForeignKey(d => d.GeneratedQueueId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_AttentionHistories_GeneratedQueues");
         });
 
         modelBuilder.Entity<AttentionState>(entity =>
@@ -191,28 +185,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_Cities_Departments");
         });
 
-        modelBuilder.Entity<ConfQueue>(entity =>
-        {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
-            entity.Property(e => e.NOrder).HasColumnName("nOrder");
-            entity.Property(e => e.Nprocessor).HasColumnName("NProcessor");
-            entity.Property(e => e.QueueDeadLetterExchange).HasMaxLength(50);
-            entity.Property(e => e.QueueDeadLetterExchangeRoutingKey).HasMaxLength(50);
-            entity.Property(e => e.QueueMode).HasMaxLength(10);
-
-            entity.HasOne(d => d.AttentionState).WithMany(p => p.ConfQueues)
-                .HasForeignKey(d => d.AttentionStateId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ConfQueues_AttentionStates");
-
-            entity.HasOne(d => d.BusinessLineLevelValueQueueConf).WithMany(p => p.ConfQueues)
-                .HasForeignKey(d => d.BusinessLineLevelValueQueueConfId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ConfQueues_BusinessLineLevelValueQueueConfig");
-        });
-
         modelBuilder.Entity<Country>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_Country");
@@ -245,15 +217,16 @@ public partial class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<GeneratedQueue>(entity =>
         {
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasColumnName("ID");
-            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.HasKey(e => e.Id).HasName("PK_GeneratedQueue");
 
-            entity.HasOne(d => d.ConfigQueue).WithMany(p => p.GeneratedQueues)
-                .HasForeignKey(d => d.ConfigQueueId)
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.Name).HasMaxLength(50);
+
+            entity.HasOne(d => d.QueueConf).WithMany(p => p.GeneratedQueues)
+                .HasForeignKey(d => d.QueueConfId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GeneratedQueues_ConfQueues");
+                .HasConstraintName("FK_GeneratedQueues_QueueConfs");
         });
 
         modelBuilder.Entity<HealthCareStaff>(entity =>
@@ -361,6 +334,36 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(50);
         });
 
+        modelBuilder.Entity<ProcessMessage>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ConsumedAt).HasColumnType("datetime");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.PublishedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Attention).WithMany(p => p.ProcessMessages)
+                .HasForeignKey(d => d.AttentionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcessMessages_Attentions");
+
+            entity.HasOne(d => d.QueueConf).WithMany(p => p.ProcessMessages)
+                .HasForeignKey(d => d.QueueConfId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcessMessages_QueueConfs");
+        });
+
+        modelBuilder.Entity<ProcessMessageErrorLog>(entity =>
+        {
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.Reason).HasMaxLength(20);
+
+            entity.HasOne(d => d.ProcessMessage).WithMany(p => p.ProcessMessageErrorLogs)
+                .HasForeignKey(d => d.ProcessMessageId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProcessMessageErrorLogs_ProcessMessages");
+        });
+
         modelBuilder.Entity<Processor>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_AttentionType");
@@ -372,6 +375,25 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnName("ID");
             entity.Property(e => e.Code).HasMaxLength(10);
             entity.Property(e => e.Name).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<QueueConf>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_ConfQueues");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedNever()
+                .HasColumnName("ID");
+            entity.Property(e => e.NOrder).HasColumnName("nOrder");
+            entity.Property(e => e.Nprocessor).HasColumnName("NProcessor");
+            entity.Property(e => e.QueueDeadLetterExchange).HasMaxLength(50);
+            entity.Property(e => e.QueueDeadLetterExchangeRoutingKey).HasMaxLength(50);
+            entity.Property(e => e.QueueMode).HasMaxLength(10);
+
+            entity.HasOne(d => d.BusinessLineLevelValueQueueConf).WithMany(p => p.QueueConfs)
+                .HasForeignKey(d => d.BusinessLineLevelValueQueueConfId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConfQueues_BusinessLineLevelValueQueueConfig");
         });
 
         modelBuilder.Entity<Rol>(entity =>

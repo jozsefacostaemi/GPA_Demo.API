@@ -17,6 +17,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         /* Función que devuelve la información de las atenciones */
         public async Task ResetAttentionsAndPersonStatus()
         {
+            await deleteProcessMessageErrorLog();
+            await deleteProcessMessage();
             await deleteAttentionHistory();
             await deleteAttentions();
             await updateStatusPersons();
@@ -64,6 +66,22 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             _context.AttentionHistories.RemoveRange(attentionHistories);
             await _context.SaveChangesAsync();
         }
+        /* Función que elimina el proceso de los mensajes */
+        private async Task deleteProcessMessage()
+        {
+            var processMessages = await _context.ProcessMessages.ToListAsync();
+            _context.ProcessMessages.RemoveRange(processMessages);
+            await _context.SaveChangesAsync();
+        }
+
+        /* Función que elimina el proceso de los mensajes */
+        private async Task deleteProcessMessageErrorLog()
+        {
+            var processMessagesErrorLogs = await _context.ProcessMessageErrorLogs.ToListAsync();
+            _context.ProcessMessageErrorLogs.RemoveRange(processMessagesErrorLogs);
+            await _context.SaveChangesAsync();
+        }
+
         /* Función que elimina las atenciones */
         private async Task deleteAttentions()
         {

@@ -3,11 +3,9 @@ using System.Collections.Generic;
 
 namespace Web.Core.Business.API.Infraestructure.Persistence.Entities;
 
-public partial class ConfQueue
+public partial class QueueConf
 {
     public Guid Id { get; set; }
-
-    public Guid AttentionStateId { get; set; }
 
     public bool? Durable { get; set; }
 
@@ -35,9 +33,9 @@ public partial class ConfQueue
 
     public Guid BusinessLineLevelValueQueueConfId { get; set; }
 
-    public virtual AttentionState AttentionState { get; set; } = null!;
-
     public virtual BusinessLineLevelValueQueueConfig BusinessLineLevelValueQueueConf { get; set; } = null!;
 
     public virtual ICollection<GeneratedQueue> GeneratedQueues { get; set; } = new List<GeneratedQueue>();
+
+    public virtual ICollection<ProcessMessage> ProcessMessages { get; set; } = new List<ProcessMessage>();
 }

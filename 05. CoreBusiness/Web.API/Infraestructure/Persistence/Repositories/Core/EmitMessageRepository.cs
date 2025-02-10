@@ -99,7 +99,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 
             var Attention = await GetAttentionByIdAsNoTracking(AttentionId);
             await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, Attention);
-            return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: null);
+            return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: Attention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */
         public async Task<RequestResult> StartAttention(Guid AttentionId) => await ProcessAttention(AttentionId, StateEventProcessEnum.INPROCESS);
@@ -194,7 +194,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     var updateStaffStateTask = UpdateHealthCareStaffState(HealthCareStaff, HealCareStaffStateId);
                     var updatePatientTask = UpdatePatientState(Patient, PatientStateId);
                     var updateProcessMessgeTask = UpdateProcessMessage(getProcessMessage);
-                    var updateAttentionStateTask = UpdateAttentionState(Attention, AttentionStateId, HealthCareStaff.Id);
+                    var updateAttentionStateTask = UpdateAttentionState(Attention, AttentionStateId, false, HealthCareStaff.Id);
                     await Task.WhenAll(new List<Task> { historyTask, updateStaffStateTask, updatePatientTask, updateProcessMessgeTask, updateAttentionStateTask });
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
@@ -210,7 +210,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             }
         }
         /* Función que procesa la transacción en Estado (En proceso - Finalizado - Cancelado) */
-        public async Task<(bool, string)> TriggerProcessAttention(Guid PatientId, Guid PatientStateId, Guid AttentionStateId, Guid HealCareStaffId, Guid HealCareStaffStateId, Guid AttentionId)
+        public async Task<(bool, string)> TriggerProcessAttention(Guid PatientId, Guid PatientStateId, Guid AttentionStateId, Guid HealCareStaffId, Guid HealCareStaffStateId, Guid AttentionId, bool ApplyClosed = false)
         {
             // Empezamos la transacción explícita
             using (var transaction = await _context.Database.BeginTransactionAsync())
@@ -226,7 +226,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                     var historyTask = AddAttentionHistory(attention.Id, AttentionStateId);
                     var updatePatientTask = UpdatePatientState(patient, PatientStateId);
                     var updateStaffStateTask = UpdateHealthCareStaffState(healcareStaff, HealCareStaffStateId);
-                    var UpdateAttentionTask = UpdateAttentionState(attention, AttentionStateId);
+                    var UpdateAttentionTask = UpdateAttentionState(attention, AttentionStateId, ApplyClosed, null);
 
                     // Esperamos que todas las tareas terminen
                     await Task.WhenAll(historyTask, updatePatientTask, updateStaffStateTask, UpdateAttentionTask);
@@ -330,10 +330,11 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             _context.HealthCareStaffs.Update(HealthCareStaff);
         }
         /* Función que actualiza el estado de la atención */
-        private async Task UpdateAttentionState(Attention Attention, Guid stateAttentionId, Guid? HealthCareStaffId = null)
+        private async Task UpdateAttentionState(Attention Attention, Guid stateAttentionId, bool ApplyClosed, Guid? HealthCareStaffId)
         {
             Attention.AttentionStateId = stateAttentionId;
             Attention.HealthCareStaffId = HealthCareStaffId != null ? HealthCareStaffId.Value : Attention.HealthCareStaffId;
+            Attention.Open = ApplyClosed ? false : Attention.Open;
             _context.Attentions.Update(Attention);
         }
         /* Función que guarda la atención  */
@@ -395,7 +396,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
 
             StatesMachineResponse? MachineStates = await _getStatesRepository.GetMachineStates(EventProcess);
             if (MachineStates == null) return RequestResult.ErrorResult($"No existe información para el evento de proceso {StateEventProcessEnum.CANCELLED}");
-            var (SucessTriggerProcessAttention, ResultTriggerProcessAttention) = await TriggerProcessAttention(Attention.PatientId, MachineStates.NextPatientStateId, MachineStates.NextAttentionStateId, HealthCareStaff.Id, (Guid)MachineStates.NextHealthCareStaffStateId, AttentionId);
+            var (SucessTriggerProcessAttention, ResultTriggerProcessAttention) = await TriggerProcessAttention(Attention.PatientId, MachineStates.NextPatientStateId, MachineStates.NextAttentionStateId, HealthCareStaff.Id, (Guid)MachineStates.NextHealthCareStaffStateId, AttentionId, (EventProcess == StateEventProcessEnum.FINALIZED || EventProcess == StateEventProcessEnum.CANCELLED) ? true : false);
             if (!SucessTriggerProcessAttention)
                 return RequestResult.ErrorRecord(message: ResultTriggerProcessAttention);
             var resultAttention = await GetAttentionByIdAsNoTracking(AttentionId);

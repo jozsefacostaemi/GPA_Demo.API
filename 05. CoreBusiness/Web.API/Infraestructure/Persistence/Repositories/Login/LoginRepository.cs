@@ -39,10 +39,9 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
                 var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable(gethealthCareStaff.Process.Code);
                 if (getHealCareStaffAvailable?.Data != null)
                 {
-                    var result = await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
+                    var resultAttention = await _IEmitMessagesRepository.AssignAttention((Guid)getHealCareStaffAvailable.Data);
                     /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
-                    if (!result.Success)
-                        await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
+                    if (resultAttention.Success) return resultAttention;
                     //else
                     //    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
                 }

@@ -39,24 +39,19 @@
             {
                 context.Response.Body = memoryStream;
 
-                await _next(context); // Ejecuta la lógica del controlador
+                await _next(context);
 
-                // Captura la respuesta del controlador
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 var responseBody = await new StreamReader(memoryStream).ReadToEndAsync();
                 memoryStream.Seek(0, SeekOrigin.Begin);
 
-                // Copia la respuesta al cuerpo original
                 await memoryStream.CopyToAsync(originalResponseBody);
                 context.Response.Body = originalResponseBody;
 
-                // Envía la respuesta al cliente
                 await context.Response.Body.FlushAsync();
 
-                // Verificar si la petición es desde un endpoint permitido
                 if (_signalREndpoints.Contains(context.Request.Path.Value))
                 {
-                    // Intentar deserializar la respuesta como JSON
                     object? payloadData = null;
 
                     if (!string.IsNullOrWhiteSpace(responseBody))
@@ -73,11 +68,9 @@
                         }
                         catch (JsonException)
                         {
-                            // Si la respuesta no es JSON válido, no se pasa payload
                         }
                     }
 
-                    // Crear un nuevo scope para obtener el servicio scoped y enviar SignalR
                     using (var scope = _serviceScopeFactory.CreateScope())
                     {
                         var notificationRepository = scope.ServiceProvider.GetRequiredService<NotificationRepository>();
@@ -88,5 +81,4 @@
         }
 
     }
-
 }

@@ -252,19 +252,19 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         {
             try
             {
-                using (var publisher = new RabbitMQPublisher(_rabbitMQSettings))
-                {
-                    var (pubSuccess, pubMessage) = await publisher.PublishMessageAsync(queueName, message, priority);
-                    if (pubSuccess)
-                    {
-                        processMessage.Published = true;
-                        processMessage.PublishedAt = DateTime.Now;
-                        _context.ProcessMessages.Update(processMessage);
-                        await _context.SaveChangesAsync();
-                    }
-                    else
-                        await LogErrorAsync("Error Publish", null, pubMessage);
-                }
+                //using (var publisher = new RabbitMQPublisher(_rabbitMQSettings))
+                //{
+                //var (pubSuccess, pubMessage) = await publisher.PublishMessageAsync(queueName, message, priority);
+                //if (pubSuccess)
+                //{
+                processMessage.Published = true;
+                processMessage.PublishedAt = DateTime.Now;
+                _context.ProcessMessages.Update(processMessage);
+                await _context.SaveChangesAsync();
+                //}
+                //else
+                //    await LogErrorAsync("Error Publish", null, pubMessage);
+                //}
             }
             catch (Exception ex)
             {
@@ -461,27 +461,50 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         /* Función que permite consumir un mensaje en el orquestador de mensajeria */
         public async Task<(bool, string, Guid)> ConsumeMessage(string queueName, Guid HealthCareStaff, StatesMachineResponse MachineStates)
         {
-            using (var consumer = new RabbitMQConsumer(_rabbitMQSettings))
+            //using (var consumer = new RabbitMQConsumer(_rabbitMQSettings))
+            //{
+            var (success, message, deliveryTag) = await GetFirstMessage(queueName);
+            if (success)
             {
-                var (success, message, deliveryTag) = await consumer.ConsumeMessageAsync(queueName);
-                if (success)
-                {
-                    var (sucessProcessAsignAttention, resultProcessAsignAttention) = await TriggerAsignAttention(Guid.Parse(message), (Guid)MachineStates.NextAttentionStateId, (Guid)MachineStates.NextPatientStateId, HealthCareStaff, (Guid)MachineStates.NextHealthCareStaffStateId);
-                    if (!sucessProcessAsignAttention)
-                    {
-                        var resultNacknowledgeMessageAsync = await consumer.NacknowledgeMessageAsync(deliveryTag);
-                        return (resultNacknowledgeMessageAsync.success, resultNacknowledgeMessageAsync.message, Guid.Parse(message));
-                    }
-                    else
-                    {
-                        var resultAcknowledgeMessageAsync = await consumer.AcknowledgeMessageAsync(deliveryTag);
-                        return (resultAcknowledgeMessageAsync.success, resultAcknowledgeMessageAsync.message, Guid.Parse(message));
-                    }
-                }
-                else
-                    return (success, message, Guid.Empty);
+                var (sucessProcessAsignAttention, resultProcessAsignAttention) = await TriggerAsignAttention(Guid.Parse(message), (Guid)MachineStates.NextAttentionStateId, (Guid)MachineStates.NextPatientStateId, HealthCareStaff, (Guid)MachineStates.NextHealthCareStaffStateId);
+                return (sucessProcessAsignAttention, resultProcessAsignAttention, Guid.Parse(message));
+                //if (!sucessProcessAsignAttention)
+                //{
+                //    var resultNacknowledgeMessageAsync = await consumer.NacknowledgeMessageAsync(deliveryTag);
+                //    return (resultNacknowledgeMessageAsync.success, resultNacknowledgeMessageAsync.message, Guid.Parse(message));
+                //}
+                //else
+                //{
+                //    var resultAcknowledgeMessageAsync = await consumer.AcknowledgeMessageAsync(deliveryTag);
+                //    return (resultAcknowledgeMessageAsync.success, resultAcknowledgeMessageAsync.message, Guid.Parse(message));
+                //}
             }
+            else
+                return (success, message, Guid.Empty);
+            //}
+            //}
+        }
+        #endregion
+
+        public async Task<(bool, string, int)> GetFirstMessage(string queueName)
+        {
+            var result = await (from gq in _context.GeneratedQueues
+                                join pm in _context.ProcessMessages on gq.QueueConfId equals pm.QueueConfId
+                                join att in _context.Attentions on pm.AttentionId equals att.Id
+                                where gq.Name == queueName && att.AttentionState.Code == AttentionStateEnum.PEND.ToString()
+                                orderby pm.CreatedAt.Date descending,
+                                        pm.CreatedAt.Hour descending,
+                                        pm.CreatedAt.Minute descending,
+                                        att.Priority descending
+                                select new { pm.AttentionId, pm.CreatedAt, att.Priority })
+                                .FirstOrDefaultAsync();
+
+            if (result != null)
+            {
+                return (true, result.AttentionId.ToString(), 0);
+            }
+
+            return (false, null, 0);
         }
     }
-    #endregion
 }

@@ -62,8 +62,8 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
                         await _context.SaveChangesAsync();
                     }
                 }
-                await DeleteQueues();
-                await CreatedQueues();
+                //await DeleteQueues();
+                //await CreatedQueues();
             }
             return true;
         }

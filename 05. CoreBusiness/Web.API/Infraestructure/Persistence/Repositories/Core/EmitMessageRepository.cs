@@ -2,7 +2,7 @@
 using Confluent.Kafka;
 using Lib.MessageQueues.Functions.IRepositories;
 using Lib.MessageQueues.Functions.Models;
-using Lib.MessageQueues.Functions.Repositories.RabbitMQ;
+//using Lib.MessageQueues.Functions.Repositories.RabbitMQ;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -30,6 +30,7 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
         private readonly IHealthCareStaffRepository _IHealthCareStaffRepository;
         private readonly IOptions<RabbitMQSettingDTO> _rabbitMQSettings;
         #endregion
+
         #region Ctor
         public EmitMessageRepository(ApplicationDbContext context, GetMachineStateValidator getMachineStateValidator, GetStatesRepository getStatesRepository, NotificationRepository NotificationRepository, IHealthCareStaffRepository iHealthCareStaffRepository, IOptions<RabbitMQSettingDTO> rabbitMQSettings)
         {

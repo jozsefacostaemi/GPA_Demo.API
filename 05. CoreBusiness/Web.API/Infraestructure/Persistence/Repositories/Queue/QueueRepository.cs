@@ -9,15 +9,15 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
     {
         #region Variables
         private readonly ApplicationDbContext _context;
-        private readonly IRabbitMQFunctions _rabbitMQFunctions;
+        //private readonly IRabbitMQFunctions _rabbitMQFunctions;
         private readonly IAttentionRepository _iattentionRepository;
         #endregion
 
         #region Ctor
-        public QueueRepository(ApplicationDbContext applicationDbContext, IRabbitMQFunctions rabbitMQFunctions, IAttentionRepository iattentionRepository)
+        public QueueRepository(ApplicationDbContext applicationDbContext, /*IRabbitMQFunctions rabbitMQFunctions, */IAttentionRepository iattentionRepository)
         {
             _context = applicationDbContext;
-            _rabbitMQFunctions = rabbitMQFunctions;
+            //_rabbitMQFunctions = rabbitMQFunctions;
             _iattentionRepository = iattentionRepository;
         }
         #endregion
@@ -68,30 +68,30 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue
             return true;
         }
         /* Función que crea las colas en el orquestador de mensajeria */
-        public async Task<bool> CreatedQueues()
-        {
-            var resultGeneratedQueues = _context.GeneratedQueues.Include(x => x.QueueConf).Where(x => x.Active == true).ToList();
-            foreach (var dr in resultGeneratedQueues)
-            {
-                await _rabbitMQFunctions.CreateQueueAsync(dr.Name,
-                    dr.QueueConf.Durable,
-                    dr.QueueConf.Exclusive,
-                    dr.QueueConf.AutoDelete,
-                    dr.QueueConf.MaxPriority,
-                    dr.QueueConf.MessageLifeTime,
-                    dr.QueueConf.QueueExpireTime,
-                    dr.QueueConf.QueueMode,
-                    dr.QueueConf.QueueDeadLetterExchange,
-                    dr.QueueConf.QueueDeadLetterExchangeRoutingKey);
-            }
-            return true;
-        }
+        //public async Task<bool> CreatedQueues()
+        //{
+        //    var resultGeneratedQueues = _context.GeneratedQueues.Include(x => x.QueueConf).Where(x => x.Active == true).ToList();
+        //    foreach (var dr in resultGeneratedQueues)
+        //    {
+        //        await _rabbitMQFunctions.CreateQueueAsync(dr.Name,
+        //            dr.QueueConf.Durable,
+        //            dr.QueueConf.Exclusive,
+        //            dr.QueueConf.AutoDelete,
+        //            dr.QueueConf.MaxPriority,
+        //            dr.QueueConf.MessageLifeTime,
+        //            dr.QueueConf.QueueExpireTime,
+        //            dr.QueueConf.QueueMode,
+        //            dr.QueueConf.QueueDeadLetterExchange,
+        //            dr.QueueConf.QueueDeadLetterExchangeRoutingKey);
+        //    }
+        //    return true;
+        //}
         /* Función que elimina todas las colas en el orquestador de mensajeria */
-        public async Task<bool> DeleteQueues()
-        {
-            await _rabbitMQFunctions.DeleteQueues();
-            return true;
-        }
+        //public async Task<bool> DeleteQueues()
+        //{
+        //    await _rabbitMQFunctions.DeleteQueues();
+        //    return true;
+        //}
         #endregion
 
         #region Private Methods

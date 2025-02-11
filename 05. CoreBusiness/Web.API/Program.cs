@@ -1,5 +1,5 @@
 using Lib.MessageQueues.Functions.IRepositories;
-using Lib.MessageQueues.Functions.Repositories.RabbitMQ;
+//using Lib.MessageQueues.Functions.Repositories.RabbitMQ;
 
 //using Lib.MessageQueues.Functions.Repositories.RabbitMQ;
 using Microsoft.EntityFrameworkCore;
@@ -44,11 +44,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 builder.Services.AddScoped<ApplicationDbContext>();
 #endregion
 #region Messaging Functions
-builder.Services.AddScoped<IRabbitMQFunctions, RabbitMQFunctions>();
+//builder.Services.AddScoped<IRabbitMQFunctions, RabbitMQFunctions>();
 builder.Services.AddScoped<IQueueRepository, QueueRepository>();
-builder.Services.Configure<RabbitMQSettingDTO>(builder.Configuration.GetSection("RabbitMQConf"));
-builder.Services.AddScoped<RabbitMQConsumer>();
-builder.Services.AddScoped<RabbitMQPublisher>();
+//builder.Services.Configure<RabbitMQSettingDTO>(builder.Configuration.GetSection("RabbitMQConf"));
+//builder.Services.AddScoped<RabbitMQConsumer>();
+//builder.Services.AddScoped<RabbitMQPublisher>();
 #endregion
 #region Repositories and functions core
 builder.Services.AddScoped<GetMachineStateValidator>();

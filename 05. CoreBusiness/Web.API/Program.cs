@@ -15,6 +15,7 @@ using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Notificatio
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.Queue;
 using Web.Core.Business.API.Infraestructure.Persistence.Repositories.StateMachine;
 using Web.Core.Business.API.Infraestructure.Persistence.Validators;
+using Web.Core.Business.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,5 +78,5 @@ app.UseSwaggerUI(options =>
 
 app.MapControllers();
 app.MapHub<EventHub>("/eventhub");
-
+app.UseMiddleware<SignalRAfterResponseMiddleware>();
 app.Run();

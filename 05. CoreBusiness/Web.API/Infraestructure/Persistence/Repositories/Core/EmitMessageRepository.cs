@@ -71,7 +71,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             if (GetHealCareStaffAvailable?.Data != null)
                 return await AssignAttention((Guid)GetHealCareStaffAvailable.Data);
             var GetAttention = await GetAttentionByIdAsNoTracking(NewAttention.Id);
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, GetAttention);
             return RequestResult.SuccessRecord(message: "Creación de atención exitosa", data: GetAttention);
         }
         /* Función que dispara mensaje en cola Asignado según el proceso seleccionado */
@@ -99,7 +98,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
                 return RequestResult.ErrorResult(ResultConsumeMessage);
 
             var Attention = await GetAttentionByIdAsNoTracking(AttentionId);
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, Attention);
             return RequestResult.SuccessRecord(message: "Asignación de atención exitosa", data: Attention);
         }
         /* Función que dispara mensaje en cola En Proceso según el proceso seleccionado */
@@ -400,8 +398,19 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             var (SucessTriggerProcessAttention, ResultTriggerProcessAttention) = await TriggerProcessAttention(Attention.PatientId, MachineStates.NextPatientStateId, MachineStates.NextAttentionStateId, HealthCareStaff.Id, (Guid)MachineStates.NextHealthCareStaffStateId, AttentionId, (EventProcess == StateEventProcessEnum.FINALIZED || EventProcess == StateEventProcessEnum.CANCELLED) ? true : false);
             if (!SucessTriggerProcessAttention)
                 return RequestResult.ErrorRecord(message: ResultTriggerProcessAttention);
+
+            /* Si hay médico disponible, asignamos la cita automaticamente */
+            if (EventProcess == StateEventProcessEnum.FINALIZED || EventProcess == StateEventProcessEnum.CANCELLED)
+            {
+                var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable(HealthCareStaff.Process.Code);
+                if (getHealCareStaffAvailable?.Data != null)
+                {
+                    var resultAssigned = await AssignAttention((Guid)getHealCareStaffAvailable.Data);
+                    if (resultAssigned.Success) return resultAssigned;
+                }
+            }
             var resultAttention = await GetAttentionByIdAsNoTracking(AttentionId);
-            string processResult = await GetAndEmitProcessResult(EventProcess, AttentionId.ToString(), resultAttention);
+            string processResult = await GetProcessResult(EventProcess, AttentionId.ToString(), resultAttention);
             return RequestResult.SuccessRecord(data: resultAttention, message: processResult);
         }
         /* Función que calcula la prioridad del mensaje con base a la edad del paciente, comorbilidades y plan relacionado */
@@ -419,45 +428,22 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Core
             return priority;
         }
         /* Función que devuelve resultado string y emite evento de SignalR */
-        private async Task<string> GetAndEmitProcessResult(StateEventProcessEnum StateEventProcessEnum, string AttentionId, dynamic resultAttention)
+        private async Task<string> GetProcessResult(StateEventProcessEnum StateEventProcessEnum, string AttentionId, dynamic resultAttention)
         {
-            if (StateEventProcessEnum == StateEventProcessEnum.FINALIZED || StateEventProcessEnum == StateEventProcessEnum.CANCELLED)
-                await MapDataEndOrCancelAttention(resultAttention?.processCode);
             switch (StateEventProcessEnum)
             {
                 case StateEventProcessEnum.INPROCESS:
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
                     return "Inicio de atención exitosa";
 
                 case StateEventProcessEnum.FINALIZED:
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
                     return "Finalización de atención exitosa";
 
                 case StateEventProcessEnum.CANCELLED:
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, resultAttention);
                     return "Cancelación de atención exitosa";
 
                 default:
                     return "Proceso realizado con éxito";
             }
-        }
-        /* Función que mapea los datos en el SignalR cuando una atención es cancelado o finalizada */
-        private async Task MapDataEndOrCancelAttention(string ProcessCode)
-        {
-            var getHealCareStaffAvailable = await _IHealthCareStaffRepository.SearchFirstHealCareStaffAvailable(ProcessCode);
-            if (getHealCareStaffAvailable?.Data != null)
-            {
-                var result = await AssignAttention((Guid)getHealCareStaffAvailable.Data);
-                /* Si no se asigna automaticamente el estado, enviamos el evento al SignalR para refrescar la pagina */
-                if (!result.Success)
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
-                else
-                    await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage, result.Data);
-
-            }
-
-            else
-                await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
         }
         /* Función que permite consumir un mensaje en el orquestador de mensajeria */
         public async Task<(bool, string, Guid)> ConsumeMessage(string queueName, Guid HealthCareStaff, StatesMachineResponse MachineStates)

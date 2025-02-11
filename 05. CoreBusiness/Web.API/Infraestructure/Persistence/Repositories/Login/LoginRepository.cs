@@ -59,7 +59,6 @@ namespace Web.Core.Business.API.Infraestructure.Persistence.Repositories.Login
             gethealthCareStaff.Loggued = false;
             gethealthCareStaff.AvailableAt = null;
             await _context.SaveChangesAsync();
-            await _NotificationRepository.SendBroadcastAsync(NotificationEventCodeEnum.AttentionMessage);
             return RequestResult.SuccessResult(message: "LogOut Exitoso", data: healthCareStaffId);
         }
     }

@@ -7,14 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-	  <Content Remove="settings.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-	  <None Include="settings.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
